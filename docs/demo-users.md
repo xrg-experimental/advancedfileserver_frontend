@@ -1,6 +1,7 @@
 ## Demo Users
 
 All users have the password: `password123`
+OTP for Admin users: `333666`
 
 | Username  | Type     | Description                    |
 |-----------|----------|--------------------------------|
