@@ -1,0 +1,9 @@
+/read-only ../docs/AdvancedFileServer_Architecture_Design.md
+/read-only ../docs/AdvancedFileServer_User_Stories.md
+/read-only ../docs/AdvancedFileServer_Implementation.md
+/read-only docs/api-docs.json
+
+/architect We have implemented user stories 1 to 10 on server side.
+A basic angular project is initialized here in afs-app. Create file
+docs/development_steps.md and list the steps the frontend team
+must do to catch up.

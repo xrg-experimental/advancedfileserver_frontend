@@ -1,0 +1,23 @@
+
+<ng-container *ngIf="auth.isLoading$ | async">
+  <app-loading-spinner [overlay]="true"></app-loading-spinner>
+</ng-container>
+
+<ng-container *ngIf="auth.currentUser$ | async; else loginLayout">
+  <app-nav-bar></app-nav-bar>
+  <mat-sidenav-container>
+    <mat-sidenav mode="side" opened>
+      <app-side-nav></app-side-nav>
+    </mat-sidenav>
+    <mat-sidenav-content>
+      <main class="main-content">
+        <router-outlet></router-outlet>
+      </main>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+  <app-footer></app-footer>
+</ng-container>
+
+<ng-template #loginLayout>
+  <router-outlet></router-outlet>
+</ng-template>

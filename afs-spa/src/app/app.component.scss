@@ -1,0 +1,18 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+mat-sidenav-container {
+  height: calc(100vh - 112px); // Adjust for header (64px) and footer (48px)
+  margin-top: 64px; // Height of the header
+}
+
+mat-sidenav {
+  width: 250px;
+  background-color: #f5f5f5;
+}
+
+.main-content {
+  padding: 20px;
+}

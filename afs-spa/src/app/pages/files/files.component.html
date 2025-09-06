@@ -1,0 +1,18 @@
+<div class="files-container">
+  <div *ngIf="isLoading" class="loading-overlay">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <mat-nav-list class="file-list" *ngIf="!isLoading && !error">
+    <mat-list-item *ngFor="let item of files" class="file-item" [class.folder]="item.type === 'folder'">
+      <mat-icon matListItemIcon class="file-icon">
+        {{ item.type === 'folder' ? 'folder' : 'insert_drive_file' }}
+      </mat-icon>
+      <span matListItemTitle class="file-name">{{ item.name }}</span>
+    </mat-list-item>
+  </mat-nav-list>
+</div>

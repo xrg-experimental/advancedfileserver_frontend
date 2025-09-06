@@ -1,0 +1,43 @@
+.files-container {
+  position: relative;
+  padding: 16px;
+  height: 100%;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.error-message {
+  color: #f44336;
+  padding: 16px;
+  background-color: #ffebee;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.file-list {
+  padding: 0;
+}
+.file-list .file-item:hover {
+  background-color: #f5f5f5;
+}
+.file-list .file-item .file-icon {
+  color: #757575;
+}
+.file-list .file-item.folder .file-icon {
+  color: #FFA000;
+}
+.file-list .file-item .file-name {
+  font-size: 14px;
+}
+
+/*# sourceMappingURL=files.component.css.map */

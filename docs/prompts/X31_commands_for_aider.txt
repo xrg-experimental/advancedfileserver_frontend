@@ -1,0 +1,73 @@
+/read-only ../docs/AdvancedFileServer_Architecture_Design.md
+/read-only ../docs/AdvancedFileServer_authentication.md
+/read-only .prompts/p2-generate-REVISED-project-requirements.md
+
+/chat-mode ask
+Review and revise requirements from the given documents with focus on
+the frontend using the requirements revision prompt
+
+-> create project_docs/frontend-requirements.md
+
+====================
+
+/read-only ../docs/technology-stack.md
+/read-only project_docs/frontend-requirements.md
+/read-only project_docs/afs-srv/api-docs.json
+/read-only project_docs/sprints/sprint_1_stories.md
+/read-only .prompts/a1-implementation-analysis-prompt.md
+
+/chat-mode ask
+#analyze-impl
+
+-> added all *.ts without *.spec.ts
+
+-> create project_docs/analysis/implementation_status.md
+
+====================
+
+/read-only project_docs/frontend-requirements.md
+/read-only project_docs/sprints/sprint_1_stories.md
+/read-only project_docs/analysis/implementation_status.md
+/read-only ../docs/technology-stack.md
+/read-only .prompts/a2-sprint-story-generation-prompt.md
+
+/chat-mode ask
+#generate-sprint-stories-status
+
+-> answer: All required documents are present and validated. Ready to proceed to STEP 2.
+
+#generate-sprint-stories
+-> stop because sprint-1 is not finished
+
+====================
+
+/read-only project_docs/sprints/sprint_1_stories.md
+/read-only project_docs/analysis/implementation_status.md
+/read-only .prompts/a3-story-analysis-prompt.md
+
+/chat-mode ask
+#analyze-story S1.3
+
+approved
+
+/chat-mode code
+save to file
+
+-> create file project_docs\analysis\S1.3-story-steps.md
+
+====================
+
+/read-only project_docs/sprints/sprint_1_stories.md
+/read-only project_docs\analysis\S1.3-story-steps.md
+/read-only .prompts/a4-implementation-prompt.md
+/add [src/app/*.ts]
+
+/chat-mode ask
+#implement-step S1.3 1
+
+-> npm install @angular/material@16.2.12 -> broken dependencies
+-> contrary to software-stack
+
+/read-only ../docs/technology-stack.md
+
+#implement-step S1.3 1 and check versions with technology-stack.md

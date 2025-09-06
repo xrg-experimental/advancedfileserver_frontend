@@ -1,0 +1,33 @@
+#/read-only ../docs/AdvancedFileServer_Architecture_Design.md
+/read-only docs/api-docs.json
+/read-only docs/development_steps.md
+
+/add package.json
+/add afs-app/angular.json
+/add afs-app/package.json
+/add afs-app/tsconfig.*
+/add afs-app/src
+
+I want to start with the unit tests. What are the directories needed for the unit tests?
+
+-> some problems starting the test
+
+/architect The test environment ist running. Implement the unit tests (step 11) 
+from development_steps.md for the angular project in afs-app.
+
+... -> overload
+
+restart aider
+
+Continue with implementing the unit tests (step 11) 
+from development_steps.md for the angular project in afs-app.
+
+npx ng test
+-> now all 25 tests are running.
+
+Disable the tests "Authentication Flow > Complete Authentication Flow > should handle concurrent login requests" and "Authentication Flow > Complete Authentication Flow > should handle failed login
+attempt with retry" until I give you a different advise.
+
+/architect Create session management tests
+
+/architect Create Error handling tests

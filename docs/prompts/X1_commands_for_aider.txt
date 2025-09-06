@@ -1,0 +1,42 @@
+#/read-only ../docs/AdvancedFileServer_Architecture_Design.md
+/read-only docs/api-docs.json
+/read-only docs/development_steps.md
+
+/add package.json
+/add afs-app
+
+/architect Implement step 1 from development_steps.md for the angular project in afs-app.
+
+/architect Now implement up to step 2 from development_steps.md for the angular project in afs-app.
+
+Now implement up to step 3 from development_steps.md for the angular project in afs-app.
+
+/architect Now implement step 4 from development_steps.md for the angular project in afs-app.
+
+/architect Now implement step 5 from development_steps.md for the angular project in afs-app.
+
+Now implement step 6 from development_steps.md for the angular project in afs-app.
+
+You added successfully the login fields and button to the angular page. But on the top of the page, 
+there is still the start info from angular greeting "Hello, afs-app" and some clickable links.
+Please remove them.
+
+-> no success -> /undo and manually removed the code block.
+
+Now implement step 7 from development_steps.md for the angular project in afs-app.
+
+Now implement step 8 from development_steps.md for the angular project in afs-app.
+
+Now implement step 9 from development_steps.md for the angular project in afs-app.
+
+Now implement step 10 from development_steps.md for the angular project in afs-app.
+
+Before we start with the unit tests check if all steps from 1 to 10 are implemented.
+
+The start page is empty now. Is this ok?
+
+-> error
+
+The error is gone but the start page is still empty.
+
+-> error in browser console identified and from aider corrected.
