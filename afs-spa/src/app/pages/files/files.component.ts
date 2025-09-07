@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatListModule } from '@angular/material/list';
+
 import { MatButtonModule } from '@angular/material/button';
 import { FileService } from '../../core/services/file.service';
 import { FileNode } from '../../core/models/file.model';
@@ -14,18 +14,19 @@ import { FileNode } from '../../core/models/file.model';
     CommonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatListModule,
     MatButtonModule
   ],
   templateUrl: './files.component.html',
-  styleUrl: './files.component.scss'
+  styleUrl: './files.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FilesComponent implements OnInit {
   fileTree: FileNode[] = [];
+  flatTree: FileNode[] = [];
   isLoading = false;
   error: string | null = null;
 
-  constructor(private fileService: FileService) {}
+  constructor(private fileService: FileService, private cdr: ChangeDetectorRef) {}
 
   trackByPath = (_: number, item: { path: string }) => item.path;
 
@@ -47,33 +48,33 @@ export class FilesComponent implements OnInit {
       // Collapse folder
       folder.expanded = false;
       this.updateFlatTree();
+      this.cdr.markForCheck();
     } else {
       // Expand folder - load children if not loaded
       if (folder.children === undefined) {
         folder.expanded = true; // show spinner immediately
         this.updateFlatTree();
+        this.cdr.markForCheck();
         this.loadFolderContents(folder);
       } else {
         folder.expanded = true;
         this.updateFlatTree();
+        this.cdr.markForCheck();
       }
     }
   }
 
-  getFlattenedTree(): FileNode[] {
-    const result: FileNode[] = [];
-
+  // No longer used in the template; kept if needed elsewhere.
+  private getFlattenedTree(): FileNode[] {
+    const out: FileNode[] = [];
     const flatten = (nodes: FileNode[]) => {
-      for (const node of nodes) {
-        result.push(node);
-        if (node.expanded && node.children) {
-          flatten(node.children);
-        }
+      for (const n of nodes) {
+        out.push(n);
+        if (n.expanded && n.children) flatten(n.children);
       }
     };
-
     flatten(this.fileTree);
-    return result;
+    return out;
   }
 
   private loadRootFiles(): void {
@@ -84,11 +85,14 @@ export class FilesComponent implements OnInit {
       next: (files) => {
         this.fileTree = this.processFiles(files, 0);
         this.isLoading = false;
+        this.updateFlatTree();
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error loading root files:', err);
         this.error = `Failed to load files: ${err.message || 'Unknown error'}`;
         this.isLoading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -115,17 +119,27 @@ export class FilesComponent implements OnInit {
         folder.children = this.processFiles(files, (folder.level || 0) + 1);
         folder.loading = false;
         this.updateFlatTree();
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error(`Error loading folder contents for ${folder.path}:`, err);
         folder.loading = false;
         // You might want to show a toast notification here
+        this.updateFlatTree();
+        this.cdr.markForCheck();
       }
     });
   }
 
   private updateFlatTree(): void {
-    // This method is called to trigger change detection
-    // The template will use getFlattenedTree() to display the tree
+    const out: FileNode[] = [];
+    const flatten = (nodes: FileNode[]) => {
+      for (const n of nodes) {
+        out.push(n);
+        if (n.expanded && n.children) flatten(n.children);
+      }
+    };
+    flatten(this.fileTree);
+    this.flatTree = out;
   }
 }
