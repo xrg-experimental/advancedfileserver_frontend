@@ -23,7 +23,7 @@ import { Observable } from 'rxjs';
         </span>
       </span>
       <span class="spacer"></span>
-      <span>© 2024 Advanced File Server</span>
+      <span>© 2024-2025 Advanced File Server</span>
     </mat-toolbar>
   `,
   styles: [`
