@@ -1,0 +1,193 @@
+# CodeRabbit configuration for Advanced File Server Frontend (Angular SPA)
+language: en-US
+early_access: false
+
+reviews:
+  profile: assertive  # More thorough feedback for Angular best practices
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  commit_status: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  poem: false
+
+  # Angular-specific path filters
+  path_filters:
+    - "afs-spa/src/**"
+    - "!afs-spa/dist/**"
+    - "!afs-spa/node_modules/**"
+    - "!afs-spa/**/*.spec.ts"  # Include test files in reviews
+    - "!**/*.min.js"
+    - "!**/*.map"
+
+  # Angular-specific path instructions
+  path_instructions:
+    - path: "afs-spa/src/app/**/*.component.ts"
+      instructions: |
+        For Angular components:
+        - Check for proper OnPush change detection strategy usage
+        - Ensure proper lifecycle hook implementation (OnInit, OnDestroy)
+        - Verify reactive forms best practices
+        - Check for memory leaks (unsubscribed observables)
+        - Validate proper dependency injection patterns
+        - Ensure accessibility (a11y) compliance
+        
+    - path: "afs-spa/src/app/**/*.service.ts"
+      instructions: |
+        For Angular services:
+        - Verify proper singleton pattern with providedIn: 'root'
+        - Check error handling for HTTP requests
+        - Ensure proper RxJS operator usage
+        - Validate dependency injection patterns
+        - Check for proper resource cleanup
+        
+    - path: "afs-spa/src/app/**/*.component.html"
+      instructions: |
+        For Angular templates:
+        - Check for proper data binding syntax
+        - Verify accessibility attributes (aria-*, role, etc.)
+        - Ensure proper Material Design component usage
+        - Check for performance issues (avoid function calls in templates)
+        - Validate proper event handling
+        
+    - path: "afs-spa/src/app/**/*.scss"
+      instructions: |
+        For SCSS files:
+        - Follow Angular Material theming patterns
+        - Use CSS custom properties for theming
+        - Ensure responsive design principles
+        - Check for proper BEM methodology usage
+        - Validate accessibility color contrast ratios
+        
+    - path: "afs-spa/src/app/**/models/*.ts"
+      instructions: |
+        For model files:
+        - Ensure proper TypeScript interfaces
+        - Check for proper data validation patterns
+        - Verify API response type safety
+        - Validate proper naming conventions
+        
+    - path: "afs-spa/**/*.spec.ts"
+      instructions: |
+        For test files:
+        - Ensure comprehensive test coverage
+        - Check for proper mocking strategies
+        - Validate async testing patterns
+        - Ensure proper TestBed configuration
+
+  # Custom labeling for this project
+  labeling_instructions:
+    - label: "frontend"
+      instructions: "Apply to all changes in the afs-spa directory"
+    - label: "ui/ux"
+      instructions: "Apply when changes affect user interface, components, or styling"
+    - label: "api-integration"
+      instructions: "Apply when changes affect HTTP services or API models"
+    - label: "file-management"
+      instructions: "Apply when changes affect file tree, file operations, or file service"
+    - label: "performance"
+      instructions: "Apply when changes might impact performance, lazy loading, or change detection"
+    - label: "accessibility"
+      instructions: "Apply when changes affect ARIA attributes, keyboard navigation, or a11y"
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: true  # Enable review of draft PRs for early feedback
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+  pre_merge_checks:
+    docstrings:
+      mode: warning
+      threshold: 70  # Slightly lower for Angular projects
+    title:
+      mode: warning
+      requirements: "Title should be concise and descriptive. Use conventional commit format when possible (feat:, fix:, chore:, etc.)"
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+
+  # Tools configuration optimized for Angular/TypeScript
+  tools:
+    eslint:
+      enabled: true
+    biome:
+      enabled: false  # Disable Biome as it might conflict with Angular CLI's ESLint setup
+    oxc:
+      enabled: true  # Enable Oxlint for additional TypeScript/JavaScript linting
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    gitleaks:
+      enabled: true  # Important for security
+    github-checks:
+      enabled: true
+      timeout_ms: 120000  # Longer timeout for Angular builds
+    languagetool:
+      enabled: true
+      level: default
+    htmlhint:
+      enabled: true
+    osvScanner:
+      enabled: true  # Security vulnerability scanning
+
+# Chat configuration
+chat:
+  auto_reply: true
+  art: true
+
+# Knowledge base configuration
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/.angular/**"
+      - "**/README.md"
+      - "**/docs/**/*.md"
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto
+
+# Code generation settings
+code_generation:
+  docstrings:
+    language: en-US
+    path_instructions:
+      - path: "afs-spa/src/app/**/*.service.ts"
+        instructions: "Generate JSDoc comments with @description, @param, @returns, and @throws tags"
+      - path: "afs-spa/src/app/**/*.component.ts"
+        instructions: "Generate JSDoc comments focusing on component purpose, inputs, outputs, and lifecycle"
+        
+  unit_tests:
+    path_instructions:
+      - path: "afs-spa/src/app/**/*.service.ts"
+        instructions: |
+          Generate Angular service tests using:
+          - TestBed.configureTestingModule for setup
+          - HttpClientTestingModule for HTTP mocking
+          - Jasmine spies for dependencies
+          - Test both success and error scenarios
+          - Follow AAA pattern (Arrange, Act, Assert)
+          
+      - path: "afs-spa/src/app/**/*.component.ts"
+        instructions: |
+          Generate Angular component tests using:
+          - ComponentFixture and TestBed setup
+          - Mock dependencies and services
+          - Test component inputs, outputs, and DOM interaction
+          - Use async/fakeAsync for asynchronous operations
+          - Test accessibility features

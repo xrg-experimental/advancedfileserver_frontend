@@ -7,12 +7,42 @@
     {{ error }}
   </div>
 
-  <mat-nav-list class="file-list" *ngIf="!isLoading && !error">
-    <mat-list-item *ngFor="let item of files" class="file-item" [class.folder]="item.type === 'folder'">
-      <mat-icon matListItemIcon class="file-icon">
-        {{ item.type === 'folder' ? 'folder' : 'insert_drive_file' }}
-      </mat-icon>
-      <span matListItemTitle class="file-name">{{ item.name }}</span>
-    </mat-list-item>
-  </mat-nav-list>
+  <div class="file-tree" *ngIf="!isLoading && !error">
+    <div *ngFor="let item of flatTree; trackBy: trackByPath"
+         class="file-item"
+         [class.folder]="item.type === 'folder'"
+         [class.loading]="item.loading"
+         [style.padding-left.px]="(item.level || 0) * 16">
+
+      <!-- Expand/Collapse button for folders -->
+      <button *ngIf="item.type === 'folder'"
+              mat-icon-button
+              class="expand-button"
+              type="button"
+              (click)="!item.loading && toggleFolder(item)"
+              [disabled]="item.loading">
+        <span class="cdk-visually-hidden">
+          {{ item.expanded ? 'Collapse folder' : 'Expand folder' }}
+        </span>
+        <mat-icon aria-hidden="true" *ngIf="!item.loading">
+          {{ item.expanded ? 'expand_less' : 'expand_more' }}
+        </mat-icon>
+        <mat-spinner *ngIf="item.loading" diameter="16"></mat-spinner>
+      </button>
+
+      <!-- Spacer for files (to align with folders) -->
+      <div *ngIf="item.type === 'file'" class="file-spacer"></div>
+
+      <!-- File/Folder icon and name -->
+      <div class="file-content" (click)="item.type === 'folder' && !item.loading && toggleFolder(item)">
+        <mat-icon class="file-icon">
+          {{ item.type === 'folder' ? 'folder' : 'insert_drive_file' }}
+        </mat-icon>
+        <span class="file-name">{{ item.name }}</span>
+        <span *ngIf="item.type === 'file' && item.size != null" class="file-size">
+          {{ item.size | number }} bytes
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
