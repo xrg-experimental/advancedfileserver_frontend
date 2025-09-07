@@ -113,7 +113,6 @@ export class FilesComponent implements OnInit {
     this.fileService.getFiles(folder.path).subscribe({
       next: (files) => {
         folder.children = this.processFiles(files, (folder.level || 0) + 1);
-        folder.expanded = true;
         folder.loading = false;
         this.updateFlatTree();
       },
