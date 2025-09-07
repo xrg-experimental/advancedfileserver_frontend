@@ -27,8 +27,46 @@ export class FilesComponent implements OnInit {
 
   constructor(private fileService: FileService) {}
 
+  trackByPath = (_: number, item: { path: string }) => item.path;
+
   ngOnInit(): void {
     this.loadRootFiles();
+  }
+
+  toggleFolder(folder: FileNode): void {
+    if (folder.type !== 'folder') {
+      return;
+    }
+
+    if (folder.expanded) {
+      // Collapse folder
+      folder.expanded = false;
+      this.updateFlatTree();
+    } else {
+      // Expand folder - load children if not loaded
+      if (!folder.children || folder.children.length === 0) {
+        this.loadFolderContents(folder);
+      } else {
+        folder.expanded = true;
+        this.updateFlatTree();
+      }
+    }
+  }
+
+  getFlattenedTree(): FileNode[] {
+    const result: FileNode[] = [];
+
+    const flatten = (nodes: FileNode[]) => {
+      for (const node of nodes) {
+        result.push(node);
+        if (node.expanded && node.children) {
+          flatten(node.children);
+        }
+      }
+    };
+
+    flatten(this.fileTree);
+    return result;
   }
 
   private loadRootFiles(): void {
@@ -58,29 +96,9 @@ export class FilesComponent implements OnInit {
     }));
   }
 
-  toggleFolder(folder: FileNode): void {
-    if (folder.type !== 'folder') {
-      return;
-    }
-
-    if (folder.expanded) {
-      // Collapse folder
-      folder.expanded = false;
-      this.updateFlatTree();
-    } else {
-      // Expand folder - load children if not loaded
-      if (!folder.children || folder.children.length === 0) {
-        this.loadFolderContents(folder);
-      } else {
-        folder.expanded = true;
-        this.updateFlatTree();
-      }
-    }
-  }
-
   private loadFolderContents(folder: FileNode): void {
     folder.loading = true;
-    
+
     this.fileService.getFiles(folder.path).subscribe({
       next: (files) => {
         folder.children = this.processFiles(files, (folder.level || 0) + 1);
@@ -99,27 +117,5 @@ export class FilesComponent implements OnInit {
   private updateFlatTree(): void {
     // This method is called to trigger change detection
     // The template will use getFlattenedTree() to display the tree
-  }
-
-  getFlattenedTree(): FileNode[] {
-    const result: FileNode[] = [];
-    
-    const flatten = (nodes: FileNode[]) => {
-      for (const node of nodes) {
-        result.push(node);
-        if (node.expanded && node.children) {
-          flatten(node.children);
-        }
-      }
-    };
-    
-    flatten(this.fileTree);
-    return result;
-  }
-
-  getIndentStyle(level: number): { [key: string]: string } {
-    return {
-      'padding-left': `${(level || 0) * 20 + 16}px`
-    };
   }
 }

@@ -8,33 +8,38 @@
   </div>
 
   <div class="file-tree" *ngIf="!isLoading && !error">
-    <div *ngFor="let item of getFlattenedTree()" 
-         class="file-item" 
+    <div *ngFor="let item of getFlattenedTree(); trackBy: trackByPath"
+         class="file-item"
          [class.folder]="item.type === 'folder'"
-         [ngStyle]="getIndentStyle(item.level || 0)">
-      
+         [class.loading]="item.loading"
+         [style.padding-left.px]="(item.level || 0) * 16">
+
       <!-- Expand/Collapse button for folders -->
-      <button *ngIf="item.type === 'folder'" 
-              mat-icon-button 
+      <button *ngIf="item.type === 'folder'"
+              mat-icon-button
               class="expand-button"
-              (click)="toggleFolder(item)"
+              type="button"
+              (click)="!item.loading && toggleFolder(item)"
               [disabled]="item.loading">
-        <mat-icon *ngIf="!item.loading">
+        <span class="cdk-visually-hidden">
+          {{ item.expanded ? 'Collapse folder' : 'Expand folder' }}
+        </span>
+        <mat-icon aria-hidden="true" *ngIf="!item.loading">
           {{ item.expanded ? 'expand_less' : 'expand_more' }}
         </mat-icon>
         <mat-spinner *ngIf="item.loading" diameter="16"></mat-spinner>
       </button>
-      
+
       <!-- Spacer for files (to align with folders) -->
       <div *ngIf="item.type === 'file'" class="file-spacer"></div>
-      
+
       <!-- File/Folder icon and name -->
-      <div class="file-content" (click)="item.type === 'folder' ? toggleFolder(item) : null">
+      <div class="file-content" (click)="item.type === 'folder' && !item.loading && toggleFolder(item)">
         <mat-icon class="file-icon">
           {{ item.type === 'folder' ? 'folder' : 'insert_drive_file' }}
         </mat-icon>
         <span class="file-name">{{ item.name }}</span>
-        <span *ngIf="item.type === 'file' && item.size" class="file-size">
+        <span *ngIf="item.type === 'file' && item.size != null" class="file-size">
           {{ item.size | number }} bytes
         </span>
       </div>
