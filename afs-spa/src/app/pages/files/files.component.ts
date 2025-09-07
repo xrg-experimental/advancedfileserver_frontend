@@ -38,13 +38,20 @@ export class FilesComponent implements OnInit {
       return;
     }
 
+    if (folder.loading) {
+      // Avoid duplicate in-flight requests
+      return;
+    }
+
     if (folder.expanded) {
       // Collapse folder
       folder.expanded = false;
       this.updateFlatTree();
     } else {
       // Expand folder - load children if not loaded
-      if (!folder.children || folder.children.length === 0) {
+      if (folder.children === undefined) {
+        folder.expanded = true; // show spinner immediately
+        this.updateFlatTree();
         this.loadFolderContents(folder);
       } else {
         folder.expanded = true;
