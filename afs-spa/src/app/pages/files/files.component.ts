@@ -64,19 +64,6 @@ export class FilesComponent implements OnInit {
     }
   }
 
-  // No longer used in the template; kept if needed elsewhere.
-  private getFlattenedTree(): FileNode[] {
-    const out: FileNode[] = [];
-    const flatten = (nodes: FileNode[]) => {
-      for (const n of nodes) {
-        out.push(n);
-        if (n.expanded && n.children) flatten(n.children);
-      }
-    };
-    flatten(this.fileTree);
-    return out;
-  }
-
   private loadRootFiles(): void {
     this.isLoading = true;
     this.error = null;
