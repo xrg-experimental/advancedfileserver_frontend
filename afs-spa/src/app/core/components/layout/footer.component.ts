@@ -23,7 +23,7 @@ import { Observable } from 'rxjs';
         </span>
       </span>
       <span class="spacer"></span>
-      <span>© 2024-2025 Advanced File Server</span>
+      <span>© 2024-{{ currentYear }} Advanced File Server</span>
     </mat-toolbar>
   `,
   styles: [`
@@ -57,6 +57,8 @@ import { Observable } from 'rxjs';
 })
 export class FooterComponent {
   systemStatus$: Observable<any>;
+
+  readonly currentYear = new Date().getFullYear();
 
   constructor(private systemStatusService: SystemStatusService) {
     this.systemStatus$ = this.systemStatusService.status$;
