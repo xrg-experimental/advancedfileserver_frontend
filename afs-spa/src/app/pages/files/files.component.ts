@@ -87,13 +87,17 @@ export class FilesComponent implements OnInit {
   }
 
   private processFiles(files: FileNode[], level: number): FileNode[] {
-    return files.map(file => ({
-      ...file,
-      level,
-      expanded: false,
-      loading: false,
-      children: file.type === 'folder' ? [] : undefined
-    }));
+    return files.map(file => {
+      const node: FileNode = {
+        ...file,
+        level,
+        expanded: false,
+        loading: false
+      };
+      // children === undefined => not yet loaded; [] => loaded but empty
+      if (file.type === 'folder') node.children = undefined;
+      return node;
+    });
   }
 
   private loadFolderContents(folder: FileNode): void {
