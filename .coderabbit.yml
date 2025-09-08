@@ -23,6 +23,10 @@ reviews:
     - "!afs-spa/**/*.spec.ts"  # Include test files in reviews
     - "!**/*.min.js"
     - "!**/*.map"
+    - ".kiro/**"
+    - "docs/*"
+    - "!docs/prompts/**"
+    - "project-docs/**"
 
   # Angular-specific path instructions
   path_instructions:
