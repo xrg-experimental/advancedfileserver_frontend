@@ -32,4 +32,53 @@ export interface FileNode {
   expanded?: boolean;
   loading?: boolean;
   level?: number;
+  selected?: boolean;
+  permissions?: FilePermissions;
+}
+
+// File operation interfaces
+export interface FilePermissions {
+  canRead: boolean;
+  canWrite: boolean;
+  canDelete: boolean;
+  canShare: boolean;
+  canUpload: boolean;
+}
+
+export interface OperationProgress {
+  id: string;
+  type: 'upload' | 'download';
+  fileName: string;
+  progress: number; // 0-100
+  status: 'pending' | 'in-progress' | 'completed' | 'error' | 'cancelled';
+  error?: string;
+  estimatedTimeRemaining?: number;
+  bytesTransferred?: number;
+  totalBytes?: number;
+}
+
+// API operation request/response interfaces
+export interface RenameRequest {
+  oldPath: string;
+  newName: string;
+}
+
+export interface MoveRequest {
+  sourcePath: string;
+  targetPath: string;
+}
+
+export interface DeleteRequest {
+  path: string;
+}
+
+export interface CreateDirectoryRequest {
+  path: string;
+  name: string;
+}
+
+export interface OperationResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
 }
