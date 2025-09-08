@@ -1,0 +1,32 @@
+# Requirements
+
+I want to add an action bar on top of the `Files` page.
+The connected server allows actions on files.
+Depending on the selected file or directory, the action bar
+should show different actions. Create a plan to implement this
+step by step.
+
+I want to simplify the interface and allow only one file or
+directory to be selected at a time.
+
+I don't want the action bar to change the place of buttons.
+Therefore I prefere to disable non-relevant buttons instead of
+hiding them.
+
+No keyboard shortcuts.
+
+The actual files view has a tree as structure. I think it's
+best to change this to have a directory for which all entries
+are visible and the user can go up or down in the hierarchy
+page by page. Does this has an influence on thi requirements
+document?
+
+File upload and file download may take a long time depending
+on the file size. Suggest some type of background process with
+progress indicator and optional interrupt possibility. All
+other actions shall work immediately.
+
+# Design
+
+LGTM
+

@@ -23,6 +23,11 @@ reviews:
     - "!afs-spa/**/*.spec.ts"  # Include test files in reviews
     - "!**/*.min.js"
     - "!**/*.map"
+    - ".kiro/**"
+    - "docs/*"
+    - "!docs/prompts/**"
+    - "project-docs/**"
+    - ".coderabbit.yml"
 
   # Angular-specific path instructions
   path_instructions:
@@ -126,7 +131,7 @@ reviews:
     oxc:
       enabled: true  # Enable Oxlint for additional TypeScript/JavaScript linting
     markdownlint:
-      enabled: true
+      enabled: false
     yamllint:
       enabled: true
     gitleaks:
