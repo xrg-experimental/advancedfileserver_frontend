@@ -1,6 +1,11 @@
 # Implementation Plan
 
-- [ ] 1. Extend data models and interfaces
+- [x] 1. Extend data models and interfaces
+
+
+
+
+
   - Create extended FileNode interface with selection state and permissions
   - Create FilePermissions, NavigationState, and OperationProgress interfaces
   - Create ActionConfig interface for action button configuration
