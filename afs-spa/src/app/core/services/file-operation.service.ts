@@ -2,14 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
-import { map, catchError, retry, delay, switchMap, takeUntil } from 'rxjs/operators';
-import { 
-  OperationProgress, 
-  RenameRequest, 
-  MoveRequest, 
-  DeleteRequest, 
-  CreateDirectoryRequest, 
-  OperationResponse 
+import { catchError, retry } from 'rxjs/operators';
+import {
+  OperationProgress,
+  RenameRequest,
+  MoveRequest,
+  DeleteRequest,
+  CreateDirectoryRequest,
+  OperationResponse
 } from '../models/file.model';
 
 @Injectable({
@@ -29,9 +29,9 @@ export class FileOperationService {
    */
   renameItem(oldPath: string, newName: string): Observable<OperationResponse> {
     const request: RenameRequest = { oldPath, newName };
-    
+
     this.logger.debug('FileOperationService: Renaming item', { oldPath, newName });
-    
+
     return this.http.post<OperationResponse>('/files/rename', request)
       .pipe(
         retry({
@@ -50,9 +50,9 @@ export class FileOperationService {
    */
   moveItem(sourcePath: string, targetPath: string): Observable<OperationResponse> {
     const request: MoveRequest = { sourcePath, targetPath };
-    
+
     this.logger.debug('FileOperationService: Moving item', { sourcePath, targetPath });
-    
+
     return this.http.post<OperationResponse>('/files/move', request)
       .pipe(
         retry({
@@ -71,9 +71,9 @@ export class FileOperationService {
    */
   deleteItem(path: string): Observable<OperationResponse> {
     const request: DeleteRequest = { path };
-    
+
     this.logger.debug('FileOperationService: Deleting item', { path });
-    
+
     return this.http.post<OperationResponse>('/files/delete', request)
       .pipe(
         retry({
@@ -92,9 +92,9 @@ export class FileOperationService {
    */
   createDirectory(path: string, name: string): Observable<OperationResponse> {
     const request: CreateDirectoryRequest = { path, name };
-    
+
     this.logger.debug('FileOperationService: Creating directory', { path, name });
-    
+
     return this.http.post<OperationResponse>('/files/create-directory', request)
       .pipe(
         retry({
@@ -126,13 +126,13 @@ export class FileOperationService {
 
     // TODO: Implement actual upload logic in future task
     // For now, return the progress observable that will be implemented later
-    this.logger.debug('FileOperationService: Upload method called (implementation pending)', { 
-      fileName: file.name, 
+    this.logger.debug('FileOperationService: Upload method called (implementation pending)', {
+      fileName: file.name,
       targetPath,
-      operationId 
+      operationId
     });
 
-    // Simulate pending state for now
+    // Simulate the pending state for now
     return progressSubject.asObservable();
   }
 
@@ -155,12 +155,12 @@ export class FileOperationService {
 
     // TODO: Implement actual download logic in future task
     // For now, return the progress observable that will be implemented later
-    this.logger.debug('FileOperationService: Download method called (implementation pending)', { 
+    this.logger.debug('FileOperationService: Download method called (implementation pending)', {
       filePath,
-      operationId 
+      operationId
     });
 
-    // Simulate pending state for now
+    // Simulate the pending state for now
     return progressSubject.asObservable();
   }
 
@@ -169,7 +169,7 @@ export class FileOperationService {
    */
   cancelOperation(operationId: string): void {
     this.logger.debug('FileOperationService: Cancelling operation', { operationId });
-    
+
     const cancellationSubject = this.operationCancellations.get(operationId);
     if (cancellationSubject) {
       cancellationSubject.next(true);
@@ -207,7 +207,7 @@ export class FileOperationService {
     const activeOperations = Array.from(this.operationsInProgress.values())
       .map(subject => subject.value)
       .filter(progress => progress.status === 'in-progress' || progress.status === 'pending');
-    
+
     return of(activeOperations);
   }
 
@@ -216,7 +216,7 @@ export class FileOperationService {
    */
   private handleOperationError(operation: string, error: any): Observable<never> {
     let userMessage = `Failed to ${operation} item`;
-    
+
     if (error?.message) {
       if (error.message.includes('permission')) {
         userMessage = `Permission denied: Cannot ${operation} this item`;
