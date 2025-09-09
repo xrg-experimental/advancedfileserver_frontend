@@ -922,7 +922,7 @@ Check the workflow logs in the Actions tab for detailed error information. Look 
 - Task parsing errors (check tasks.md format)
 '''
     
-    with open('KIRO_GITHUB_INTEGRATION.md', 'w') as f:
+    with open('kiro-github-integration.md', 'w') as f:
         f.write(doc_content)
 
 def check_tools():
