@@ -134,26 +134,45 @@ jobs:
           repo = "${{ github.repository }}"
 
           try:
-              # Create milestone using gh api
-              cmd = [
-                  'gh', 'api', f'repos/{repo}/milestones',
-                  '--method', 'POST',
-                  '--field', f'title={milestone_name}',
-                  '--field', 'description=Auto-generated milestone from Kiro planning'
+              # First, try to get existing milestones
+              get_cmd = [
+                  'gh', 'api', f'repos/{repo}/milestones'
               ]
-
-              result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-              response = json.loads(result.stdout)
-              milestone_number = response['number']
-
-              print(f"Created milestone: {milestone_name} (#{milestone_number})")
-
+              
+              result = subprocess.run(get_cmd, capture_output=True, text=True, check=True)
+              milestones = json.loads(result.stdout)
+              
+              # Check if milestone with this title already exists
+              existing_milestone = None
+              for milestone in milestones:
+                  if milestone['title'] == milestone_name:
+                      existing_milestone = milestone
+                      break
+              
+              if existing_milestone:
+                  milestone_number = existing_milestone['number']
+                  print(f"Found existing milestone: {milestone_name} (#{milestone_number})")
+              else:
+                  # Create new milestone
+                  create_cmd = [
+                      'gh', 'api', f'repos/{repo}/milestones',
+                      '--method', 'POST',
+                      '--field', f'title={milestone_name}',
+                      '--field', 'description=Auto-generated milestone from Kiro planning'
+                  ]
+                  
+                  result = subprocess.run(create_cmd, capture_output=True, text=True, check=True)
+                  response = json.loads(result.stdout)
+                  milestone_number = response['number']
+                  
+                  print(f"Created new milestone: {milestone_name} (#{milestone_number})")
+              
               # Set GitHub output
               with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                   f.write(f"milestone_number={milestone_number}\\n")
-
+                  
           except subprocess.CalledProcessError as e:
-              print(f"Error creating milestone: {e}")
+              print(f"Error with milestone operation: {e}")
               print(f"Error output: {e.stderr}")
               sys.exit(1)
           except json.JSONDecodeError as e:
