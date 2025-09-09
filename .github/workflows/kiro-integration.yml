@@ -1,0 +1,237 @@
+# .github/workflows/kiro-integration.yml
+name: Kiro to GitHub Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      requirements_file:
+        description: 'Path to requirements.md file'
+        required: true
+        default: 'requirements.md'
+      design_file:
+        description: 'Path to design.md file'
+        required: true
+        default: 'design.md'
+      tasks_file:
+        description: 'Path to tasks.md file'
+        required: true
+        default: 'tasks.md'
+      project_name:
+        description: 'Project name for issue titles'
+        required: true
+        default: 'File Action Bar'
+      milestone_name:
+        description: 'Milestone name (optional)'
+        required: false
+
+jobs:
+  create-project-structure:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    outputs:
+      milestone_number: ${{ steps.create-milestone.outputs.milestone_number }}
+      epic_issue_number: ${{ steps.create-epic.outputs.issue_number }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          npm install -g @octokit/rest js-yaml markdown-it
+
+      - name: Create milestone
+        id: create-milestone
+        if: ${{ inputs.milestone_name != '' }}
+        run: |
+          MILESTONE_NAME="${{ inputs.milestone_name }}"
+          MILESTONE_RESPONSE=$(curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/milestones \
+            -d "{\"title\":\"$MILESTONE_NAME\",\"description\":\"Auto-generated milestone from Kiro planning\"}")
+          MILESTONE_NUMBER=$(echo $MILESTONE_RESPONSE | jq -r '.number')
+          echo "milestone_number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Parse Kiro files and create epic issue
+        id: create-epic
+        run: |
+          node -e "
+          const fs = require('fs');
+          const { Octokit } = require('@octokit/rest');
+          
+          const octokit = new Octokit({
+            auth: '${{ secrets.GITHUB_TOKEN }}'
+          });
+          
+          // Read files
+          const requirements = fs.readFileSync('${{ inputs.requirements_file }}', 'utf8');
+          const design = fs.readFileSync('${{ inputs.design_file }}', 'utf8');
+          const tasks = fs.readFileSync('${{ inputs.tasks_file }}', 'utf8');
+          
+          // Create epic issue body
+          const epicBody = \`
+## Epic: ${{ inputs.project_name }}
+
+### Overview
+  This epic tracks the implementation of the ${{ inputs.project_name }} feature based on Kiro-generated planning documents.
+  
+  ### Requirements Summary
+  \${requirements.split('## Requirements')[1]?.split('### Requirement 1')[0] || 'See attached requirements document'}
+  
+  ### Architecture Overview
+  \${design.split('## Architecture')[1]?.split('### Component Structure')[0] || 'See attached design document'}
+  
+  ### Implementation Phases
+  \${design.match(/## Implementation Phases[\\s\\S]*/) || 'See attached design document'}
+
+### Related Documents
+- Requirements: ${{ inputs.requirements_file }}
+- Design: ${{ inputs.design_file }}
+- Tasks: ${{ inputs.tasks_file }}
+
+### Acceptance Criteria
+- [ ] All task items completed
+- [ ] Requirements validated
+- [ ] Code reviewed and approved
+- [ ] Tests passing
+    \`;
+    
+    (async () => {
+    const response = await octokit.rest.issues.create({
+    owner: '${{ github.repository_owner }}',
+    repo: '${{ github.repository }}'.split('/')[1],
+    title: 'Epic: ${{ inputs.project_name }}',
+    body: epicBody,
+    labels: ['epic', 'enhancement'],
+    milestone: ${{ steps.create-milestone.outputs.milestone_number || 'null' }}
+});
+    console.log('issue_number=' + response.data.number);
+    process.stdout.write('issue_number=' + response.data.number);
+})();
+    " >> $GITHUB_OUTPUT
+
+  create-task-issues:
+    needs: create-project-structure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Parse tasks and create issues
+      run: |
+        node -e "
+    const fs = require('fs');
+    const { Octokit } = require('@octokit/rest');
+    
+    const octokit = new Octokit({
+    auth: '${{ secrets.GITHUB_TOKEN }}'
+});
+    
+    const tasks = fs.readFileSync('${{ inputs.tasks_file }}', 'utf8');
+    
+    // Parse tasks from markdown
+    const taskRegex = /- \[([ x])\] (\d+)\. (.*?)(?=\n  - |_Requirements:|$)/gs;
+    const matches = [...tasks.matchAll(taskRegex)];
+    
+    const taskPromises = matches.map(async (match, index) => {
+    const [, completed, taskNumber, taskContent] = match;
+    const isCompleted = completed === 'x';
+    
+    // Extract task title and description
+    const lines = taskContent.trim().split('\n');
+    const title = lines[0].trim();
+    const description = lines.slice(1).join('\n').trim();
+    
+    // Extract requirements references
+    const requirementsMatch = taskContent.match(/_Requirements: (.*?)_/);
+    const requirements = requirementsMatch ? requirementsMatch[1] : '';
+
+    const issueBody = \`
+## Task #\${taskNumber}: \${title}
+  
+  \${description}
+  
+  ### Requirements Covered
+  \${requirements}
+  
+  ### Related Epic
+  Closes #${{ needs.create-project-structure.outputs.epic_issue_number }}
+
+### Definition of Done
+- [ ] Implementation completed
+- [ ] Unit tests written and passing
+- [ ] Code reviewed
+- [ ] Requirements validated
+- [ ] Documentation updated
+    \`;
+    
+    const labels = ['task', 'enhancement'];
+    if (isCompleted) labels.push('completed');
+    
+    try {
+    const response = await octokit.rest.issues.create({
+                  owner: '${{ github.repository_owner }}',
+                  repo: '${{ github.repository }}'.split('/')[1],
+                  title: \`Task \${taskNumber}: \${title}\`,
+                  body: issueBody,
+                  labels: labels,
+                  milestone: ${{ needs.create-project-structure.outputs.milestone_number || 'null' }},
+                  assignee: '${{ github.actor }}'
+});
+    
+    console.log(\`Created issue #\${response.data.number} for task \${taskNumber}\`);
+    
+    // If task is completed, close the issue
+    if (isCompleted) {
+    await octokit.rest.issues.update({
+                  owner: '${{ github.repository_owner }}',
+                  repo: '${{ github.repository }}'.split('/')[1],
+                  issue_number: response.data.number,
+                  state: 'closed'
+});
+    console.log(\`Closed completed issue #\${response.data.number}\`);
+}
+
+} catch (error) {
+    console.error(\`Error creating issue for task \${taskNumber}:\`, error);
+}
+});
+    
+    await Promise.all(taskPromises);
+    "
+
+  create-project-board:
+    needs: [create-project-structure, create-task-issues]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      
+    steps:
+    - name: Create project board
+      run: |
+        # Create a project board for tracking progress
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    https://api.github.com/repos/${{ github.repository }}/projects \
+                    -d '{
+                    "name": "${{ inputs.project_name }} - Implementation Tracking",
+                    "body": "Auto-generated project board for tracking ${{ inputs.project_name }} implementation"
+                  }'

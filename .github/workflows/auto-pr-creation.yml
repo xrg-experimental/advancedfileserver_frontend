@@ -1,0 +1,269 @@
+# .github/workflows/auto-pr-creation.yml
+name: Auto PR Creation from Completed Tasks
+
+on:
+  push:
+    branches:
+      - 'feature/task-*'
+      - 'task/*'
+  workflow_dispatch:
+    inputs:
+      task_number:
+        description: 'Task number to create PR for'
+        required: true
+      base_branch:
+        description: 'Base branch for PR'
+        required: false
+        default: 'main'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract task number from branch
+        id: extract-task
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TASK_NUMBER="${{ inputs.task_number }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+            # Extract task number from branch name (e.g., feature/task-04, task/04)
+            TASK_NUMBER=$(echo $BRANCH_NAME | grep -oE '[0-9]+' | head -1)
+          fi
+          
+          if [ -z "$TASK_NUMBER" ]; then
+            echo "No task number found in branch name or input"
+            exit 1
+          fi
+          
+          echo "task_number=$TASK_NUMBER" >> $GITHUB_OUTPUT
+          echo "Task number: $TASK_NUMBER"
+
+      - name: Find corresponding issue
+        id: find-issue
+        run: |
+          TASK_NUMBER="${{ steps.extract-task.outputs.task_number }}"
+          
+          # Search for issue with task number in title
+          ISSUE_RESPONSE=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues?state=open&per_page=100")
+          
+          ISSUE_NUMBER=$(echo "$ISSUE_RESPONSE" | jq -r ".[] | select(.title | test(\"Task $TASK_NUMBER:\")) | .number")
+          
+          if [ -z "$ISSUE_NUMBER" ] || [ "$ISSUE_NUMBER" = "null" ]; then
+            echo "No open issue found for task $TASK_NUMBER"
+            exit 1
+          fi
+          
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "Found issue #$ISSUE_NUMBER for task $TASK_NUMBER"
+
+      - name: Get issue details
+        id: issue-details
+        run: |
+          ISSUE_NUMBER="${{ steps.find-issue.outputs.issue_number }}"
+          
+          ISSUE_DETAILS=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER")
+          
+          ISSUE_TITLE=$(echo "$ISSUE_DETAILS" | jq -r '.title')
+          ISSUE_BODY=$(echo "$ISSUE_DETAILS" | jq -r '.body')
+          MILESTONE_NUMBER=$(echo "$ISSUE_DETAILS" | jq -r '.milestone.number // empty')
+          
+          echo "issue_title<<EOF" >> $GITHUB_OUTPUT
+          echo "$ISSUE_TITLE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "milestone_number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Check if PR already exists
+        id: check-pr
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
+          
+          PR_RESPONSE=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:$BRANCH_NAME&base=$BASE_BRANCH")
+          
+          PR_COUNT=$(echo "$PR_RESPONSE" | jq '. | length')
+          
+          if [ "$PR_COUNT" -gt 0 ]; then
+            echo "PR already exists for this branch"
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate commit summary
+        id: commit-summary
+        if: steps.check-pr.outputs.pr_exists == 'false'
+        run: |
+          BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
+          
+          # Get commit messages since branching
+          COMMITS=$(git log --pretty=format:"- %s" $BASE_BRANCH..${{ github.ref_name }})
+          
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check for Kiro files and generate PR body
+        id: generate-pr-body
+        if: steps.check-pr.outputs.pr_exists == 'false'
+        run: |
+          TASK_NUMBER="${{ steps.extract-task.outputs.task_number }}"
+          ISSUE_NUMBER="${{ steps.find-issue.outputs.issue_number }}"
+          ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
+          COMMITS="${{ steps.commit-summary.outputs.commits }}"
+          
+          # Try to find epic issue (usually issue #1 or look for "Epic:" in title)
+          EPIC_RESPONSE=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues?per_page=10")
+          
+          EPIC_NUMBER=$(echo "$EPIC_RESPONSE" | jq -r '.[] | select(.title | test("Epic:")) | .number' | head -1)
+          
+          # Generate PR body
+          PR_BODY=$(cat << EOF
+## $ISSUE_TITLE
+
+### Description
+  This PR implements the changes for $ISSUE_TITLE as part of the Kiro-planned feature development.
+
+### Related Issues
+- Resolves #$ISSUE_NUMBER
+  $(if [ ! -z "$EPIC_NUMBER" ] && [ "$EPIC_NUMBER" != "null" ]; then echo "- Related to Epic #$EPIC_NUMBER"; fi)
+  
+  ### Changes Made
+  $COMMITS
+
+### Testing Checklist
+- [ ] Unit tests added/updated
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+- [ ] Edge cases tested
+- [ ] Error handling tested
+
+### Code Quality Checklist
+- [ ] Code follows project standards
+- [ ] TypeScript types properly defined
+- [ ] Error handling implemented
+- [ ] Loading states implemented
+- [ ] No console.log statements left in code
+
+### Review Checklist
+- [ ] Functionality matches requirements
+- [ ] Code is readable and maintainable
+- [ ] Performance considerations addressed
+- [ ] Security considerations addressed
+- [ ] Accessibility requirements met
+
+### Deployment Notes
+  <!-- Add any special deployment considerations -->
+
+---
+*This PR was auto-generated from Kiro task tracking*
+  EOF
+  )
+  
+  echo "pr_body<<EOF" >> $GITHUB_OUTPUT
+  echo "$PR_BODY" >> $GITHUB_OUTPUT
+  echo "EOF" >> $GITHUB_OUTPUT
+  
+  - name: Create Pull Request
+if: steps.check-pr.outputs.pr_exists == 'false'
+run: |
+  TASK_NUMBER="${{ steps.extract-task.outputs.task_number }}"
+  ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
+  PR_BODY="${{ steps.generate-pr-body.outputs.pr_body }}"
+  BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
+  MILESTONE_NUMBER="${{ steps.issue-details.outputs.milestone_number }}"
+  
+  # Clean up the issue title for PR title
+  PR_TITLE=$(echo "$ISSUE_TITLE" | sed 's/Task [0-9]*: //g')
+  
+  PR_DATA=$(cat << EOF
+  {
+    "title": "$PR_TITLE",
+    "body": $(echo "$PR_BODY" | jq -Rs .),
+    "head": "${{ github.ref_name }}",
+    "base": "$BASE_BRANCH",
+    "draft": false
+  }
+  EOF
+  )
+  
+  # Add milestone if it exists
+  if [ ! -z "$MILESTONE_NUMBER" ] && [ "$MILESTONE_NUMBER" != "null" ]; then
+PR_DATA=$(echo "$PR_DATA" | jq --argjson milestone "$MILESTONE_NUMBER" '. + {milestone: $milestone}')
+  fi
+  
+  PR_RESPONSE=$(curl -X POST \
+-H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+-H "Accept: application/vnd.github.v3+json" \
+-H "Content-Type: application/json" \
+  "https://api.github.com/repos/${{ github.repository }}/pulls" \
+  -d "$PR_DATA")
+  
+  PR_NUMBER=$(echo "$PR_RESPONSE" | jq -r '.number')
+  
+  if [ "$PR_NUMBER" != "null" ]; then
+  echo "✅ Created PR #$PR_NUMBER: $PR_TITLE"
+  
+  # Link the PR to the issue
+  curl -X POST \
+-H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+-H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/${{ github.repository }}/issues/${{ steps.find-issue.outputs.issue_number }}/comments" \
+-d "{\"body\":\"🔗 Pull Request created: #$PR_NUMBER\"}"
+
+  # Add labels to PR
+  curl -X POST \
+-H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+-H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" \
+  -d '["task", "kiro-generated"]'
+  
+  else
+  echo "❌ Failed to create PR"
+  echo "$PR_RESPONSE" | jq .
+  exit 1
+  fi
+
+- name: Auto-assign reviewers
+  if: steps.check-pr.outputs.pr_exists == 'false'
+  run: |
+    # Get the last created PR number
+    LATEST_PR=$(curl -s \
+      -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+      -H "Accept: application/vnd.github.v3+json" \
+      "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&per_page=1&sort=created&direction=desc")
+    
+    PR_NUMBER=$(echo "$LATEST_PR" | jq -r '.[0].number')
+    
+    # Add reviewer (can be configured)
+    # This example adds the repository owner as reviewer
+    if [ "${{ github.actor }}" != "${{ github.repository_owner }}" ]; then
+      curl -X POST \
+        -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/requested_reviewers" \
+        -d "{\"reviewers\":[\"${{ github.repository_owner }}\"]}"
+    fi
