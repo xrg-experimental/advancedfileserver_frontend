@@ -7,20 +7,28 @@ assignees: ''
 ---
 
 ## Task Description
-<!-- Detailed description of the task -->
+<!-- Detailed description of the task from Kiro tasks.md -->
 
 ## Requirements Covered
-<!-- List the requirement IDs this task addresses -->
+<!-- List the requirement IDs this task addresses from Kiro requirements.md -->
 
 ## Definition of Done
 - [ ] Implementation completed
 - [ ] Unit tests written and passing
 - [ ] Code reviewed and approved
-- [ ] Requirements validated
+- [ ] Requirements validated against Kiro specifications
 - [ ] Documentation updated
 
 ## Related Epic
-<!-- Link to the related epic issue -->
+<!-- This will be automatically filled: Part of epic #[EPIC_NUMBER] -->
+
+## Kiro Planning References
+- [Requirements](.kiro/specs/file-action-bar/requirements.md)
+- [Design](.kiro/specs/file-action-bar/design.md)
+- [Tasks](.kiro/specs/file-action-bar/tasks.md)
 
 ## Additional Context
-<!-- Any additional context or notes -->
+<!-- Any additional context or notes specific to this task -->
+
+---
+*This issue was auto-generated from Kiro planning documents*

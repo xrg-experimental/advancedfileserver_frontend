@@ -7,6 +7,11 @@ Brief description of the changes implemented in this PR.
 - Resolves #[ISSUE_NUMBER]
 - Related to Epic #[EPIC_NUMBER]
 
+### Kiro Planning References
+- [Requirements](.kiro/specs/file-action-bar/requirements.md)
+- [Design](.kiro/specs/file-action-bar/design.md)
+- [Tasks](.kiro/specs/file-action-bar/tasks.md)
+
 ### Changes Made
 - [ ] Component implementation
 - [ ] Service implementation  
@@ -14,6 +19,15 @@ Brief description of the changes implemented in this PR.
 - [ ] Styling updates
 - [ ] API integration
 - [ ] Tests added
+
+### Requirements Validation
+<!-- Check off requirements from Kiro requirements.md that this PR addresses -->
+- [ ] Requirement 1: User interface requirements met
+- [ ] Requirement 2: Selection state requirements met
+- [ ] Requirement 3: File operations requirements met
+- [ ] Requirement 4: Permissions requirements met
+- [ ] Requirement 5: Visual feedback requirements met
+- [ ] Requirement 6: Progress tracking requirements met
 
 ### Testing Checklist
 - [ ] Unit tests added/updated
@@ -30,8 +44,8 @@ Brief description of the changes implemented in this PR.
 - [ ] No console.log statements left
 
 ### Review Checklist
-- [ ] Functionality matches requirements
-- [ ] Code is readable and maintainable
+- [ ] Functionality matches Kiro requirements
+- [ ] Code follows Kiro design specifications
 - [ ] Performance considerations addressed
 - [ ] Security considerations addressed
 - [ ] Accessibility requirements met
@@ -41,3 +55,6 @@ Brief description of the changes implemented in this PR.
 
 ### Deployment Notes
 <!-- Any special deployment considerations -->
+
+---
+*This PR was created as part of Kiro-planned feature development*
