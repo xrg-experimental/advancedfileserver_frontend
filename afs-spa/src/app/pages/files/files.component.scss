@@ -15,7 +15,7 @@
 
   .nav-up-button {
     margin-right: 12px;
-    
+
     &:disabled {
       opacity: 0.5;
     }
@@ -84,10 +84,8 @@
     user-select: none;
 
     &:hover {
-++ b/afs-spa/src/app/pages/files/files.component.scss
-@@ -87,2 +87,2 @@
       background-color: var(--mat-sys-surface-container-high, #f5f5f5);
-     }
+    }
 
     &.selected {
       background-color: #e3f2fd;
