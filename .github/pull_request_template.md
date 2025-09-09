@@ -14,7 +14,7 @@ Brief description of the changes implemented in this PR.
 
 ### Changes Made
 - [ ] Component implementation
-- [ ] Service implementation  
+- [ ] Service implementation
 - [ ] Template updates
 - [ ] Styling updates
 - [ ] API integration
