@@ -51,14 +51,42 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          MILESTONE_NAME="${{ inputs.milestone_name }}"
-          RESPONSE=$(gh api repos/${{ github.repository }}/milestones \
-            --method POST \
-            --field title="$MILESTONE_NAME" \
-            --field description="Auto-generated milestone from Kiro planning")
-          MILESTONE_NUMBER=$(echo "$RESPONSE" | jq -r '.number')
-          echo "milestone_number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
-          echo "Created milestone: $MILESTONE_NAME (#$MILESTONE_NUMBER)"
+          python3 << 'PYTHON_SCRIPT'
+          import subprocess
+          import json
+          import os
+          import sys
+
+          milestone_name = "${{ inputs.milestone_name }}"
+          repo = "${{ github.repository }}"
+
+          try:
+              # Create milestone using gh api
+              cmd = [
+                  'gh', 'api', f'repos/{repo}/milestones',
+                  '--method', 'POST',
+                  '--field', f'title={milestone_name}',
+                  '--field', 'description=Auto-generated milestone from Kiro planning'
+              ]
+              
+              result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+              response = json.loads(result.stdout)
+              milestone_number = response['number']
+              
+              print(f"Created milestone: {milestone_name} (#{milestone_number})")
+              
+              # Set GitHub output
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"milestone_number={milestone_number}\n")
+                  
+          except subprocess.CalledProcessError as e:
+              print(f"Error creating milestone: {e}")
+              print(f"Error output: {e.stderr}")
+              sys.exit(1)
+          except json.JSONDecodeError as e:
+              print(f"Error parsing JSON response: {e}")
+              sys.exit(1)
+          PYTHON_SCRIPT
 
       - name: Parse Kiro files and create epic issue
         id: create-epic
@@ -140,17 +168,25 @@ jobs:
               '--title', 'Epic: ${{ inputs.project_name }}',
               '--body', epic_body,
               '--label', 'epic,enhancement'
-          ] + milestone_arg + ['--json', 'number', '--jq', '.number']
+          ] + milestone_arg
 
           try:
               result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-              epic_number = result.stdout.strip()
-              print(f"issue_number={epic_number}")
-              print(f"Created epic issue #{epic_number}")
+              issue_url = result.stdout.strip()
               
-              # Set GitHub output
-              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-                  f.write(f"issue_number={epic_number}\n")
+              # Extract issue number from URL
+              epic_number = issue_url.split('/')[-1] if issue_url else None
+              
+              if epic_number:
+                  print(f"issue_number={epic_number}")
+                  print(f"Created epic issue #{epic_number}")
+                  
+                  # Set GitHub output
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write(f"issue_number={epic_number}\n")
+              else:
+                  print("Failed to extract issue number from URL")
+                  sys.exit(1)
                   
           except subprocess.CalledProcessError as e:
               print(f"Error creating epic issue: {e}")
