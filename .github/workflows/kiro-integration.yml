@@ -40,10 +40,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          node-version: '18'
+          python-version: '3.x'
 
       - name: Create milestone
         id: create-milestone
@@ -65,27 +65,56 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Read files and create epic issue body
-          REQUIREMENTS_SUMMARY=""
-          if [ -f "${{ inputs.requirements_file }}" ]; then
-            REQUIREMENTS_SUMMARY=$(sed -n '/## Requirements/,/### Requirement 1/p' "${{ inputs.requirements_file }}" | head -n -1 | tail -n +2)
-          fi
-          
-          ARCHITECTURE_OVERVIEW=""
-          if [ -f "${{ inputs.design_file }}" ]; then
-            ARCHITECTURE_OVERVIEW=$(sed -n '/## Architecture/,/### Component Structure/p' "${{ inputs.design_file }}" | head -n -1 | tail -n +2)
-          fi
+          python3 << 'PYTHON_SCRIPT'
+import os
+import subprocess
+import sys
 
-          EPIC_BODY="## Epic: ${{ inputs.project_name }}
+def read_file_section(file_path, start_marker, end_marker=None):
+    """Read a section from a markdown file between markers"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        start_idx = content.find(start_marker)
+        if start_idx == -1:
+            return "See attached document"
+        
+        start_idx += len(start_marker)
+        
+        if end_marker:
+            end_idx = content.find(end_marker, start_idx)
+            if end_idx != -1:
+                return content[start_idx:end_idx].strip()
+        
+        # If no end marker or not found, take next 500 chars
+        return content[start_idx:start_idx+500].strip()
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+# Read file sections
+requirements_summary = read_file_section(
+    '${{ inputs.requirements_file }}', 
+    '## Requirements', 
+    '### Requirement 1'
+)
+
+architecture_overview = read_file_section(
+    '${{ inputs.design_file }}', 
+    '## Architecture', 
+    '### Component Structure'
+)
+
+epic_body = f"""## Epic: ${{ inputs.project_name }}
 
 ### Overview
 This epic tracks the implementation of the ${{ inputs.project_name }} feature based on Kiro-generated planning documents.
 
 ### Requirements Summary
-${REQUIREMENTS_SUMMARY:-See attached requirements document}
+{requirements_summary}
 
 ### Architecture Overview
-${ARCHITECTURE_OVERVIEW:-See attached design document}
+{architecture_overview}
 
 ### Related Documents
 - [Requirements](${{ inputs.requirements_file }})
@@ -98,22 +127,36 @@ ${ARCHITECTURE_OVERVIEW:-See attached design document}
 - [ ] Code reviewed and approved
 - [ ] Tests passing
 
-*Auto-generated from Kiro planning documents*"
+*Auto-generated from Kiro planning documents*"""
 
-          MILESTONE_ARG=""
-          if [ -n "${{ steps.create-milestone.outputs.milestone_number }}" ]; then
-            MILESTONE_ARG="--milestone ${{ steps.create-milestone.outputs.milestone_number }}"
-          fi
+# Create epic issue
+milestone_arg = []
+milestone_number = '${{ steps.create-milestone.outputs.milestone_number }}'
+if milestone_number and milestone_number != '':
+    milestone_arg = ['--milestone', milestone_number]
 
-          EPIC_NUMBER=$(gh issue create \
-            --title "Epic: ${{ inputs.project_name }}" \
-            --body "$EPIC_BODY" \
-            --label "epic,enhancement" \
-            $MILESTONE_ARG \
-            --json number --jq .number)
-          
-          echo "issue_number=$EPIC_NUMBER" >> $GITHUB_OUTPUT
-          echo "Created epic issue #$EPIC_NUMBER"
+cmd = [
+    'gh', 'issue', 'create',
+    '--title', 'Epic: ${{ inputs.project_name }}',
+    '--body', epic_body,
+    '--label', 'epic,enhancement'
+] + milestone_arg + ['--json', 'number', '--jq', '.number']
+
+try:
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    epic_number = result.stdout.strip()
+    print(f"issue_number={epic_number}")
+    print(f"Created epic issue #{epic_number}")
+    
+    # Set GitHub output
+    with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+        f.write(f"issue_number={epic_number}\n")
+        
+except subprocess.CalledProcessError as e:
+    print(f"Error creating epic issue: {e}")
+    print(f"Error output: {e.stderr}")
+    sys.exit(1)
+PYTHON_SCRIPT
 
   create-task-issues:
     needs: create-project-structure
@@ -127,58 +170,73 @@ ${ARCHITECTURE_OVERVIEW:-See attached design document}
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+      
     - name: Parse tasks and create issues
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Parse tasks file and create individual issues
-        python3 << 'PYTHON_EOF'
+        python3 << 'PYTHON_SCRIPT'
 import re
 import subprocess
-import os
+import sys
 
-# Read tasks file
-with open('${{ inputs.tasks_file }}', 'r') as f:
-    tasks_content = f.read()
+def parse_tasks_file(file_path):
+    """Parse the tasks.md file and extract task information"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+    except FileNotFoundError:
+        print(f"Tasks file not found: {file_path}")
+        return []
+    
+    # Improved regex to capture task details
+    task_pattern = r'- \[([ x])\] (\d+)\. (.*?)(?=\n- \[|\n\n|$)'
+    matches = re.findall(task_pattern, content, re.DOTALL)
+    
+    tasks = []
+    for completed, task_num, content_block in matches:
+        is_completed = completed == 'x'
+        
+        # Split content into lines and process
+        lines = content_block.strip().split('\n')
+        title = lines[0].strip()
+        
+        # Extract description and requirements
+        description_lines = []
+        requirements = 'Not specified'
+        
+        for line in lines[1:]:
+            line = line.strip()
+            if line.startswith('_Requirements:') and line.endswith('_'):
+                requirements = line.replace('_Requirements: ', '').replace('_', '')
+            elif line and not line.startswith('_'):
+                description_lines.append(line)
+        
+        description = '\n'.join(description_lines).strip()
+        
+        tasks.append({
+            'number': task_num,
+            'title': title,
+            'description': description,
+            'requirements': requirements,
+            'completed': is_completed
+        })
+    
+    return tasks
 
-# Parse tasks using improved regex
-task_pattern = r'- \[([ x])\] (\d+)\. (.*?)(?=\n- \[|\n\n|$)'
-matches = re.findall(task_pattern, tasks_content, re.DOTALL)
-
-epic_number = '${{ needs.create-project-structure.outputs.epic_issue_number }}'
-milestone_number = '${{ needs.create-project-structure.outputs.milestone_number }}'
-
-print(f"Found {len(matches)} tasks to process")
-print(f"Epic number: {epic_number}")
-print(f"Milestone number: {milestone_number}")
-
-for completed, task_num, content in matches:
-    is_completed = completed == 'x'
-    
-    # Extract title (first line) and description
-    lines = content.strip().split('\n')
-    title = lines[0].strip()
-    
-    # Get description and requirements
-    description_lines = []
-    requirements = 'Not specified'
-    
-    for line in lines[1:]:
-        line = line.strip()
-        if line.startswith('_Requirements:') and line.endswith('_'):
-            requirements = line.replace('_Requirements: ', '').replace('_', '')
-        elif line and not line.startswith('_'):
-            description_lines.append(line)
-    
-    description = '\n'.join(description_lines).strip()
-    
-    issue_body = f"""## Task #{task_num}: {title}
+def create_task_issue(task, epic_number, milestone_number):
+    """Create a GitHub issue for a task"""
+    issue_body = f"""## Task #{task['number']}: {task['title']}
 
 ### Description
-{description if description else 'Implementation details to be determined during development.'}
+{task['description'] if task['description'] else 'Implementation details to be determined during development.'}
 
 ### Requirements Covered
-{requirements}
+{task['requirements']}
 
 ### Related Epic
 Part of epic #{epic_number}
@@ -193,56 +251,54 @@ Part of epic #{epic_number}
 *Auto-generated from Kiro tasks*
 """
     
-    # Create issue
     labels = 'task,enhancement'
-    if is_completed:
+    if task['completed']:
         labels += ',completed'
     
     cmd = [
         'gh', 'issue', 'create',
-        '--title', f'Task {task_num}: {title}',
+        '--title', f"Task {task['number']}: {task['title']}",
         '--body', issue_body,
         '--label', labels
     ]
     
-    if milestone_number and milestone_number != 'null':
+    if milestone_number and milestone_number != 'null' and milestone_number != '':
         cmd.extend(['--milestone', milestone_number])
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         issue_url = result.stdout.strip()
-        print(f"Created issue for task {task_num}: {title}")
-        print(f"Issue URL: {issue_url}")
+        print(f"Created issue for task {task['number']}: {task['title']}")
         
         # If task is completed, close the issue
-        if is_completed:
+        if task['completed']:
             issue_number = issue_url.split('/')[-1]
             close_cmd = ['gh', 'issue', 'close', issue_number, '--reason', 'completed']
             subprocess.run(close_cmd, check=True)
-            print(f"Closed completed task {task_num}")
+            print(f"Closed completed task {task['number']}")
             
+        return True
     except subprocess.CalledProcessError as e:
-        print(f"Failed to create issue for task {task_num}: {e}")
+        print(f"Failed to create issue for task {task['number']}: {e}")
         print(f"Error output: {e.stderr}")
-PYTHON_EOF
+        return False
 
-  create-project-board:
-    needs: [create-project-structure, create-task-issues]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      
-    steps:
-    - name: Create project board
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Create a project board for tracking progress
-        gh api repos/${{ github.repository }}/projects \
-          --method POST \
-          --field name="${{ inputs.project_name }} - Implementation Tracking" \
-          --field body="Auto-generated project board for tracking ${{ inputs.project_name }} implementation"
-        
-        echo "✅ Project board created successfully"
+# Main execution
+epic_number = '${{ needs.create-project-structure.outputs.epic_issue_number }}'
+milestone_number = '${{ needs.create-project-structure.outputs.milestone_number }}'
+
+print(f"Epic number: {epic_number}")
+print(f"Milestone number: {milestone_number}")
+
+# Parse tasks
+tasks = parse_tasks_file('${{ inputs.tasks_file }}')
+print(f"Found {len(tasks)} tasks to process")
+
+# Create issues for each task
+success_count = 0
+for task in tasks:
+    if create_task_issue(task, epic_number, milestone_number):
+        success_count += 1
+
+print(f"Successfully created {success_count} out of {len(tasks)} task issues")
+PYTHON_SCRIPT

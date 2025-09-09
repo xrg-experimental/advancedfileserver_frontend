@@ -31,124 +31,103 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract task number from branch
-        id: extract-task
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TASK_NUMBER="${{ inputs.task_number }}"
-          else
-            BRANCH_NAME="${{ github.ref_name }}"
-            # Extract task number from branch name (e.g., feature/task-04, task/04)
-            TASK_NUMBER=$(echo $BRANCH_NAME | grep -oE '[0-9]+' | head -1)
-          fi
-          
-          if [ -z "$TASK_NUMBER" ]; then
-            echo "No task number found in branch name or input"
-            exit 1
-          fi
-          
-          echo "task_number=$TASK_NUMBER" >> $GITHUB_OUTPUT
-          echo "Task number: $TASK_NUMBER"
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-      - name: Find corresponding issue
-        id: find-issue
+      - name: Extract task number and create PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TASK_NUMBER="${{ steps.extract-task.outputs.task_number }}"
-          
-          # Search for issue with task number in title
-          ISSUE_NUMBER=$(gh issue list --search "Task $TASK_NUMBER:" --json number --jq '.[0].number // empty')
-          
-          if [ -z "$ISSUE_NUMBER" ] || [ "$ISSUE_NUMBER" = "null" ]; then
-            echo "No open issue found for task $TASK_NUMBER"
-            exit 1
-          fi
-          
-          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-          echo "Found issue #$ISSUE_NUMBER for task $TASK_NUMBER"
+          python3 << 'PYTHON_SCRIPT'
+import os
+import subprocess
+import sys
+import json
 
-      - name: Get issue details
-        id: issue-details
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE_NUMBER="${{ steps.find-issue.outputs.issue_number }}"
-          
-          ISSUE_DETAILS=$(gh issue view $ISSUE_NUMBER --json title,milestone)
-          
-          ISSUE_TITLE=$(echo "$ISSUE_DETAILS" | jq -r '.title')
-          MILESTONE_NUMBER=$(echo "$ISSUE_DETAILS" | jq -r '.milestone.number // empty')
-          
-          echo "issue_title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
-          echo "milestone_number=$MILESTONE_NUMBER" >> $GITHUB_OUTPUT
+def extract_task_number():
+    """Extract task number from branch name or workflow input"""
+    if os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch':
+        return os.environ.get('INPUT_TASK_NUMBER', '')
+    else:
+        branch_name = os.environ.get('GITHUB_REF_NAME', '')
+        import re
+        match = re.search(r'\d+', branch_name)
+        return match.group() if match else ''
 
-      - name: Check if PR already exists
-        id: check-pr
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BRANCH_NAME="${{ github.ref_name }}"
-          BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
-          
-          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --base "$BASE_BRANCH" --json number --jq '.[0].number // empty')
-          
-          if [ ! -z "$EXISTING_PR" ]; then
-            echo "PR already exists: #$EXISTING_PR"
-            echo "pr_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "pr_exists=false" >> $GITHUB_OUTPUT
-          fi
+def find_issue_for_task(task_number):
+    """Find the GitHub issue for a specific task number"""
+    cmd = ['gh', 'issue', 'list', '--search', f'Task {task_number}:', '--json', 'number,title,milestone']
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        issues = json.loads(result.stdout)
+        
+        if not issues:
+            return None, None, None
+            
+        issue = issues[0]
+        return issue['number'], issue['title'], issue.get('milestone', {}).get('number')
+    except subprocess.CalledProcessError as e:
+        print(f"Error finding issue: {e}")
+        return None, None, None
 
-      - name: Generate commit summary
-        id: commit-summary
-        if: steps.check-pr.outputs.pr_exists == 'false'
-        run: |
-          BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
-          
-          # Get commit messages since branching
-          COMMITS=$(git log --pretty=format:"- %s" $BASE_BRANCH..${{ github.ref_name }} | head -10)
-          
-          if [ -z "$COMMITS" ]; then
-            COMMITS="- Initial commit for this task"
-          fi
-          
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+def check_existing_pr(branch_name, base_branch):
+    """Check if PR already exists for this branch"""
+    cmd = ['gh', 'pr', 'list', '--head', branch_name, '--base', base_branch, '--json', 'number']
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        prs = json.loads(result.stdout)
+        return prs[0]['number'] if p rs else None
+    except subprocess.CalledProcessError:
+        return None
 
-      - name: Check for Kiro files and generate PR body
-        id: generate-pr-body
-        if: steps.check-pr.outputs.pr_exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TASK_NUMBER="${{ steps.extract-task.outputs.task_number }}"
-          ISSUE_NUMBER="${{ steps.find-issue.outputs.issue_number }}"
-          ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
-          COMMITS="${{ steps.commit-summary.outputs.commits }}"
-          
-          # Try to find epic issue (look for "Epic:" in title)
-          EPIC_NUMBER=$(gh issue list --search "Epic:" --json number --jq '.[0].number // empty')
-          
-          # Generate PR body
-          PR_BODY="## $ISSUE_TITLE
+def get_commit_summary(base_branch, current_branch):
+    """Get commit summary since branching"""
+    cmd = ['git', 'log', '--pretty=format:- %s', f'{base_branch}..{current_branch}']
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        commits = result.stdout.strip()
+        return commits if commits else '- Initial commit for this task'
+    except subprocess.CalledProcessError:
+        return '- Initial commit for this task'
+
+def find_epic_issue():
+    """Find the epic issue"""
+    cmd = ['gh', 'issue', 'list', '--search', 'Epic:', '--json', 'number']
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        issues = json.loads(result.stdout)
+        return issues[0]['number'] if issues else None
+    except subprocess.CalledProcessError:
+        return None
+
+def create_pull_request(task_number, issue_number, issue_title, milestone_number, commits, base_branch, current_branch):
+    """Create the pull request"""
+    epic_number = find_epic_issue()
+    
+    # Clean up issue title for PR title
+    pr_title = issue_title.replace(f'Task {task_number}: ', '')
+    
+    pr_body = f"""## {issue_title}
 
 ### Description
-This PR implements the changes for $ISSUE_TITLE as part of the Kiro-planned feature development.
+This PR implements the changes for {issue_title} as part of the Kiro-planned feature development.
 
 ### Related Issues
-- Resolves #$ISSUE_NUMBER"
-          
-          if [ ! -z "$EPIC_NUMBER" ] && [ "$EPIC_NUMBER" != "null" ]; then
-            PR_BODY="$PR_BODY
-- Related to Epic #$EPIC_NUMBER"
-          fi
-          
-          PR_BODY="$PR_BODY
+- Resolves #{issue_number}"""
+    
+    if epic_number:
+        pr_body += f"\n- Related to Epic #{epic_number}"
+    
+    pr_body += f"""
 
 ### Changes Made
-$COMMITS
+{commits}
 
 ### Testing Checklist
 - [ ] Unit tests added/updated
@@ -175,59 +154,72 @@ $COMMITS
 <!-- Add any special deployment considerations -->
 
 ---
-*This PR was auto-generated from Kiro task tracking*"
-          
-          echo "pr_body<<EOF" >> $GITHUB_OUTPUT
-          echo "$PR_BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+*This PR was auto-generated from Kiro task tracking*"""
 
-      - name: Create Pull Request
-        if: steps.check-pr.outputs.pr_exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TASK_NUMBER="${{ steps.extract-task.outputs.task_number }}"
-          ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
-          PR_BODY="${{ steps.generate-pr-body.outputs.pr_body }}"
-          BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
-          MILESTONE_NUMBER="${{ steps.issue-details.outputs.milestone_number }}"
-          
-          # Clean up the issue title for PR title
-          PR_TITLE=$(echo "$ISSUE_TITLE" | sed "s/Task $TASK_NUMBER: //g")
-          
-          # Create PR
-          MILESTONE_ARG=""
-          if [ ! -z "$MILESTONE_NUMBER" ] && [ "$MILESTONE_NUMBER" != "null" ]; then
-            MILESTONE_ARG="--milestone $MILESTONE_NUMBER"
-          fi
-          
-          PR_NUMBER=$(gh pr create \
-            --title "$PR_TITLE" \
-            --body "$PR_BODY" \
-            --base "$BASE_BRANCH" \
-            --head "${{ github.ref_name }}" \
-            --label "task,kiro-generated" \
-            $MILESTONE_ARG \
-            --json number --jq .number)
-          
-          echo "✅ Created PR #$PR_NUMBER: $PR_TITLE"
-          
-          # Link the PR to the issue
-          gh issue comment ${{ steps.find-issue.outputs.issue_number }} --body "🔗 Pull Request created: #$PR_NUMBER"
+    cmd = [
+        'gh', 'pr', 'create',
+        '--title', pr_title,
+        '--body', pr_body,
+        '--base', base_branch,
+        '--head', current_branch,
+        '--label', 'task,kiro-generated',
+        '--json', 'number', '--jq', '.number'
+    ]
+    
+    if milestone_number:
+        cmd.extend(['--milestone', str(milestone_number)])
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        pr_number = result.stdout.strip()
+        
+        # Link PR to issue
+        comment_cmd = ['gh', 'issue', 'comment', str(issue_number), '--body', f'🔗 Pull Request created: #{pr_number}']
+        subprocess.run(comment_cmd, check=True)
+        
+        print(f"✅ Created PR #{pr_number}: {pr_title}")
+        return pr_number
+    except subprocess.CalledProcessError as e:
+        print(f"Error creating PR: {e}")
+        return None
 
-      - name: Auto-assign reviewers
-        if: steps.check-pr.outputs.pr_exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Get the latest PR number for this branch
-          LATEST_PR=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number // empty')
-          
-          if [ ! -z "$LATEST_PR" ] && [ "$LATEST_PR" != "null" ]; then
-            # Add reviewer (repository owner if different from actor)
-            if [ "${{ github.actor }}" != "${{ github.repository_owner }}" ]; then
-              gh pr edit $LATEST_PR --add-reviewer "${{ github.repository_owner }}" || echo "Could not add reviewer"
-            fi
-            
-            echo "✅ PR #$LATEST_PR configured successfully"
-          fi
+# Main execution
+task_number = extract_task_number()
+if not task_number:
+    print("No task number found in branch name or input")
+    sys.exit(1)
+
+print(f"Task number: {task_number}")
+
+branch_name = os.environ.get('GITHUB_REF_NAME', '')
+base_branch = os.environ.get('INPUT_BASE_BRANCH', 'main')
+
+# Check if PR already exists
+existing_pr = check_existing_pr(branch_name, base_branch)
+if existing_pr:
+    print(f"PR already exists: #{existing_pr}")
+    sys.exit(0)
+
+# Find corresponding issue
+issue_number, issue_title, milestone_number = find_issue_for_task(task_number)
+if not issue_number:
+    print(f"No open issue found for task {task_number}")
+    sys.exit(1)
+
+print(f"Found issue #{issue_number}: {issue_title}")
+
+# Get commit summary
+commits = get_commit_summary(base_branch, branch_name)
+
+# Create PR
+pr_number = create_pull_request(
+    task_number, issue_number, issue_title, 
+    milestone_number, commits, base_branch, branch_name
+)
+
+if pr_number:
+    print(f"Successfully created PR #{pr_number}")
+else:
+    print("Failed to create PR")
+    sys.exit(1)
+PYTHON_SCRIPT
