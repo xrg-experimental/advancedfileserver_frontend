@@ -81,7 +81,7 @@ Based on your File Action Bar example, here's how you'd use it:
 
 ## 🎨 **Key Benefits**
 
-- **Zero Manual Issue Creation**: Your 12 tasks become 12 GitHub issues automatically
+- **Zero Manual Issue Creation**: Your tasks become GitHub issues automatically
 - **Traceability**: Every PR links back to requirements and design decisions
 - **Consistent Process**: Templates ensure nothing is missed in reviews
 - **Progress Tracking**: Milestones and project boards show real progress
@@ -144,5 +144,5 @@ scripts/
 - **GitHub CLI integration**: Uses `gh` for authenticated API calls
 
 The script is designed to work specifically with your File Action Bar 
-example - it will parse the 12 tasks and create corresponding GitHub 
+example - it will parse the tasks and create corresponding GitHub 
 issues automatically!
