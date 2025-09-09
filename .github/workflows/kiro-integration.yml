@@ -85,7 +85,7 @@ jobs:
                   if end_marker:
                       end_idx = content.find(end_marker, start_idx)
                       if end_idx != -1:
-                          return content[start_idx:end_idx].strip()
+                        return content[start_idx:end_idx].strip()
                   
                   # If no end marker or not found, take next 500 chars
                   return content[start_idx:start_idx+500].strip()

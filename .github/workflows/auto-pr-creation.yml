@@ -40,7 +40,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 << 'PYTHON_SCRIPT'^
+          python3 << 'PYTHON_SCRIPT'
           import os
           import subprocess
           import sys
