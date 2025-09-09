@@ -139,97 +139,97 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 << 'PYTHON_SCRIPT'
-import os
-import subprocess
-import sys
+          import os
+          import subprocess
+          import sys
 
-def read_file_section(file_path, start_marker, end_marker=None):
-    """Read a section from a markdown file between markers"""
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        start_idx = content.find(start_marker)
-        if start_idx == -1:
-            return "See attached document"
-        
-        start_idx += len(start_marker)
-        
-        if end_marker:
-            end_idx = content.find(end_marker, start_idx)
-            if end_idx != -1:
-                return content[start_idx:end_idx].strip()
-        
-        # If no end marker or not found, take next 500 chars
-        return content[start_idx:start_idx+500].strip()
-    except Exception as e:
-        return f"Error reading file: {e}"
+          def read_file_section(file_path, start_marker, end_marker=None):
+              """Read a section from a markdown file between markers"""
+              try:
+                  with open(file_path, 'r') as f:
+                      content = f.read()
+                  
+                  start_idx = content.find(start_marker)
+                  if start_idx == -1:
+                      return "See attached document"
+                  
+                  start_idx += len(start_marker)
+                  
+                  if end_marker:
+                      end_idx = content.find(end_marker, start_idx)
+                      if end_idx != -1:
+                        return content[start_idx:end_idx].strip()
+                  
+                  # If no end marker or not found, take next 500 chars
+                  return content[start_idx:start_idx+500].strip()
+              except Exception as e:
+                  return f"Error reading file: {e}"
 
-# Read file sections
-requirements_summary = read_file_section(
-    '${{ inputs.requirements_file }}', 
-    '## Requirements', 
-    '### Requirement 1'
-)
+          # Read file sections
+          requirements_summary = read_file_section(
+              '${{ inputs.requirements_file }}', 
+              '## Requirements', 
+              '### Requirement 1'
+          )
 
-architecture_overview = read_file_section(
-    '${{ inputs.design_file }}', 
-    '## Architecture', 
-    '### Component Structure'
-)
+          architecture_overview = read_file_section(
+              '${{ inputs.design_file }}', 
+              '## Architecture', 
+              '### Component Structure'
+          )
 
-epic_body = f"""## Epic: ${{ inputs.project_name }}
+          epic_body = f"""## Epic: ${{ inputs.project_name }}
 
-### Overview
-This epic tracks the implementation of the ${{ inputs.project_name }} feature based on Kiro-generated planning documents.
+          ### Overview
+          This epic tracks the implementation of the ${{ inputs.project_name }} feature based on Kiro-generated planning documents.
 
-### Requirements Summary
-{requirements_summary}
+          ### Requirements Summary
+          {requirements_summary}
 
-### Architecture Overview
-{architecture_overview}
+          ### Architecture Overview
+          {architecture_overview}
 
-### Related Documents
-- [Requirements](${{ inputs.requirements_file }})
-- [Design](${{ inputs.design_file }})
-- [Tasks](${{ inputs.tasks_file }})
+          ### Related Documents
+          - [Requirements](${{ inputs.requirements_file }})
+          - [Design](${{ inputs.design_file }})
+          - [Tasks](${{ inputs.tasks_file }})
 
-### Acceptance Criteria
-- [ ] All task items completed
-- [ ] Requirements validated
-- [ ] Code reviewed and approved
-- [ ] Tests passing
+          ### Acceptance Criteria
+          - [ ] All task items completed
+          - [ ] Requirements validated
+          - [ ] Code reviewed and approved
+          - [ ] Tests passing
 
-*Auto-generated from Kiro planning documents*"""
+          *Auto-generated from Kiro planning documents*"""
 
-# Create epic issue
-milestone_arg = []
-milestone_number = '${{ steps.create-milestone.outputs.milestone_number }}'
-if milestone_number and milestone_number != '':
-    milestone_arg = ['--milestone', milestone_number]
+          # Create epic issue
+          milestone_arg = []
+          milestone_number = '${{ steps.create-milestone.outputs.milestone_number }}'
+          if milestone_number and milestone_number != '':
+              milestone_arg = ['--milestone', milestone_number]
 
-cmd = [
-    'gh', 'issue', 'create',
-    '--title', 'Epic: ${{ inputs.project_name }}',
-    '--body', epic_body,
-    '--label', 'epic,enhancement'
-] + milestone_arg + ['--json', 'number', '--jq', '.number']
+          cmd = [
+              'gh', 'issue', 'create',
+              '--title', 'Epic: ${{ inputs.project_name }}',
+              '--body', epic_body,
+              '--label', 'epic,enhancement'
+          ] + milestone_arg + ['--json', 'number', '--jq', '.number']
 
-try:
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    epic_number = result.stdout.strip()
-    print(f"issue_number={epic_number}")
-    print(f"Created epic issue #{epic_number}")
-    
-    # Set GitHub output
-    with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-        f.write(f"issue_number={epic_number}\\n")
-        
-except subprocess.CalledProcessError as e:
-    print(f"Error creating epic issue: {e}")
-    print(f"Error output: {e.stderr}")
-    sys.exit(1)
-PYTHON_SCRIPT
+          try:
+              result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+              epic_number = result.stdout.strip()
+              print(f"issue_number={epic_number}")
+              print(f"Created epic issue #{epic_number}")
+              
+              # Set GitHub output
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"issue_number={epic_number}\\n")
+                  
+          except subprocess.CalledProcessError as e:
+              print(f"Error creating epic issue: {e}")
+              print(f"Error output: {e.stderr}")
+              sys.exit(1)
+          PYTHON_SCRIPT
 
   create-task-issues:
     needs: create-project-structure
@@ -253,128 +253,128 @@ PYTHON_SCRIPT
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         python3 << 'PYTHON_SCRIPT'
-import re
-import subprocess
-import sys
+        import re
+        import subprocess
+        import sys
 
-def parse_tasks_file(file_path):
-    """Parse the tasks.md file and extract task information"""
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-    except FileNotFoundError:
-        print(f"Tasks file not found: {file_path}")
-        return []
-    
-    # Improved regex to capture task details
-    task_pattern = r'- \\[([ x])\\] (\\d+)\\. (.*?)(?=\\n- \\[|\\n\\n|$)'
-    matches = re.findall(task_pattern, content, re.DOTALL)
-    
-    tasks = []
-    for completed, task_num, content_block in matches:
-        is_completed = completed == 'x'
-        
-        # Split content into lines and process
-        lines = content_block.strip().split('\\n')
-        title = lines[0].strip()
-        
-        # Extract description and requirements
-        description_lines = []
-        requirements = 'Not specified'
-        
-        for line in lines[1:]:
-            line = line.strip()
-            if line.startswith('_Requirements:') and line.endswith('_'):
-                requirements = line.replace('_Requirements: ', '').replace('_', '')
-            elif line and not line.startswith('_'):
-                description_lines.append(line)
-        
-        description = '\\n'.join(description_lines).strip()
-        
-        tasks.append({
-            'number': task_num,
-            'title': title,
-            'description': description,
-            'requirements': requirements,
-            'completed': is_completed
-        })
-    
-    return tasks
-
-def create_task_issue(task, epic_number, milestone_number):
-    """Create a GitHub issue for a task"""
-    issue_body = f"""## Task #{task['number']}: {task['title']}
-
-### Description
-{task['description'] if task['description'] else 'Implementation details to be determined during development.'}
-
-### Requirements Covered
-{task['requirements']}
-
-### Related Epic
-Part of epic #{epic_number}
-
-### Definition of Done
-- [ ] Implementation completed
-- [ ] Unit tests written and passing
-- [ ] Code reviewed
-- [ ] Requirements validated
-- [ ] Documentation updated
-
-*Auto-generated from Kiro tasks*
-"""
-    
-    labels = 'task,enhancement'
-    if task['completed']:
-        labels += ',completed'
-    
-    cmd = [
-        'gh', 'issue', 'create',
-        '--title', f"Task {task['number']}: {task['title']}",
-        '--body', issue_body,
-        '--label', labels
-    ]
-    
-    if milestone_number and milestone_number != 'null' and milestone_number != '':
-        cmd.extend(['--milestone', milestone_number])
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        issue_url = result.stdout.strip()
-        print(f"Created issue for task {task['number']}: {task['title']}")
-        
-        # If task is completed, close the issue
-        if task['completed']:
-            issue_number = issue_url.split('/')[-1]
-            close_cmd = ['gh', 'issue', 'close', issue_number, '--reason', 'completed']
-            subprocess.run(close_cmd, check=True)
-            print(f"Closed completed task {task['number']}")
+        def parse_tasks_file(file_path):
+            """Parse the tasks.md file and extract task information"""
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+            except FileNotFoundError:
+                print(f"Tasks file not found: {file_path}")
+                return []
             
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to create issue for task {task['number']}: {e}")
-        print(f"Error output: {e.stderr}")
-        return False
+            # Improved regex to capture task details
+            task_pattern = r'- \\[([ x])\\] (\\d+)\\. (.*?)(?=\\n- \\[|\\n\\n|$)'
+            matches = re.findall(task_pattern, content, re.DOTALL)
+            
+            tasks = []
+            for completed, task_num, content_block in matches:
+                is_completed = completed == 'x'
+                
+                # Split content into lines and process
+                lines = content_block.strip().split('\\n')
+                title = lines[0].strip()
+                
+                # Extract description and requirements
+                description_lines = []
+                requirements = 'Not specified'
+                
+                for line in lines[1:]:
+                    line = line.strip()
+                    if line.startswith('_Requirements:') and line.endswith('_'):
+                        requirements = line.replace('_Requirements: ', '').replace('_', '')
+                    elif line and not line.startswith('_'):
+                        description_lines.append(line)
+                
+                description = '\\n'.join(description_lines).strip()
+                
+                tasks.append({
+                    'number': task_num,
+                    'title': title,
+                    'description': description,
+                    'requirements': requirements,
+                    'completed': is_completed
+                })
+            
+            return tasks
 
-# Main execution
-epic_number = '${{ needs.create-project-structure.outputs.epic_issue_number }}'
-milestone_number = '${{ needs.create-project-structure.outputs.milestone_number }}'
+        def create_task_issue(task, epic_number, milestone_number):
+            """Create a GitHub issue for a task"""
+            issue_body = f"""## Task #{task['number']}: {task['title']}
 
-print(f"Epic number: {epic_number}")
-print(f"Milestone number: {milestone_number}")
+        ### Description
+        {task['description'] if task['description'] else 'Implementation details to be determined during development.'}
 
-# Parse tasks
-tasks = parse_tasks_file('${{ inputs.tasks_file }}')
-print(f"Found {len(tasks)} tasks to process")
+        ### Requirements Covered
+        {task['requirements']}
 
-# Create issues for each task
-success_count = 0
-for task in tasks:
-    if create_task_issue(task, epic_number, milestone_number):
-        success_count += 1
+        ### Related Epic
+        Part of epic #{epic_number}
 
-print(f"Successfully created {success_count} out of {len(tasks)} task issues")
-PYTHON_SCRIPT
+        ### Definition of Done
+        - [ ] Implementation completed
+        - [ ] Unit tests written and passing
+        - [ ] Code reviewed
+        - [ ] Requirements validated
+        - [ ] Documentation updated
+
+        *Auto-generated from Kiro tasks*
+        """
+            
+            labels = 'task,enhancement'
+            if task['completed']:
+                labels += ',completed'
+            
+            cmd = [
+                'gh', 'issue', 'create',
+                '--title', f"Task {task['number']}: {task['title']}",
+                '--body', issue_body,
+                '--label', labels
+            ]
+            
+            if milestone_number and milestone_number != 'null' and milestone_number != '':
+                cmd.extend(['--milestone', milestone_number])
+            
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                issue_url = result.stdout.strip()
+                print(f"Created issue for task {task['number']}: {task['title']}")
+                
+                # If task is completed, close the issue
+                if task['completed']:
+                    issue_number = issue_url.split('/')[-1]
+                    close_cmd = ['gh', 'issue', 'close', issue_number, '--reason', 'completed']
+                    subprocess.run(close_cmd, check=True)
+                    print(f"Closed completed task {task['number']}")
+                    
+                return True
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to create issue for task {task['number']}: {e}")
+                print(f"Error output: {e.stderr}")
+                return False
+
+        # Main execution
+        epic_number = '${{ needs.create-project-structure.outputs.epic_issue_number }}'
+        milestone_number = '${{ needs.create-project-structure.outputs.milestone_number }}'
+
+        print(f"Epic number: {epic_number}")
+        print(f"Milestone number: {milestone_number}")
+
+        # Parse tasks
+        tasks = parse_tasks_file('${{ inputs.tasks_file }}')
+        print(f"Found {len(tasks)} tasks to process")
+
+        # Create issues for each task
+        success_count = 0
+        for task in tasks:
+            if create_task_issue(task, epic_number, milestone_number):
+                success_count += 1
+
+        print(f"Successfully created {success_count} out of {len(tasks)} task issues")
+        PYTHON_SCRIPT
 '''
     
     with open('.github/workflows/kiro-integration.yml', 'w') as f:
@@ -425,188 +425,188 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 << 'PYTHON_SCRIPT'
-import os
-import subprocess
-import sys
-import json
+          import os
+          import subprocess
+          import sys
+          import json
 
-def extract_task_number():
-    """Extract task number from branch name or workflow input"""
-    if os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch':
-        return os.environ.get('INPUT_TASK_NUMBER', '')
-    else:
-        branch_name = os.environ.get('GITHUB_REF_NAME', '')
-        import re
-        match = re.search(r'\\d+', branch_name)
-        return match.group() if match else ''
+          def extract_task_number():
+              """Extract task number from branch name or workflow input"""
+              if os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch':
+                  return os.environ.get('INPUT_TASK_NUMBER', '')
+              else:
+                  branch_name = os.environ.get('GITHUB_REF_NAME', '')
+                  import re
+                  match = re.search(r'\\d+', branch_name)
+                  return match.group() if match else ''
 
-def find_issue_for_task(task_number):
-    """Find the GitHub issue for a specific task number"""
-    cmd = ['gh', 'issue', 'list', '--search', f'Task {task_number}:', '--json', 'number,title,milestone']
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        issues = json.loads(result.stdout)
-        
-        if not issues:
-            return None, None, None
-            
-        issue = issues[0]
-        return issue['number'], issue['title'], issue.get('milestone', {}).get('number')
-    except subprocess.CalledProcessError as e:
-        print(f"Error finding issue: {e}")
-        return None, None, None
+          def find_issue_for_task(task_number):
+              """Find the GitHub issue for a specific task number"""
+              cmd = ['gh', 'issue', 'list', '--search', f'Task {task_number}:', '--json', 'number,title,milestone']
+              
+              try:
+                  result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                  issues = json.loads(result.stdout)
+                  
+                  if not issues:
+                      return None, None, None
+                      
+                  issue = issues[0]
+                  return issue['number'], issue['title'], issue.get('milestone', {}).get('number')
+              except subprocess.CalledProcessError as e:
+                  print(f"Error finding issue: {e}")
+                  return None, None, None
 
-def check_existing_pr(branch_name, base_branch):
-    """Check if PR already exists for this branch"""
-    cmd = ['gh', 'pr', 'list', '--head', branch_name, '--base', base_branch, '--json', 'number']
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        prs = json.loads(result.stdout)
-        return prs[0]['number'] if p rs else None
-    except subprocess.CalledProcessError:
-        return None
+          def check_existing_pr(branch_name, base_branch):
+              """Check if PR already exists for this branch"""
+              cmd = ['gh', 'pr', 'list', '--head', branch_name, '--base', base_branch, '--json', 'number']
+              
+              try:
+                  result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                  prs = json.loads(result.stdout)
+                  return prs[0]['number'] if p rs else None
+              except subprocess.CalledProcessError:
+                  return None
 
-def get_commit_summary(base_branch, current_branch):
-    """Get commit summary since branching"""
-    cmd = ['git', 'log', '--pretty=format:- %s', f'{base_branch}..{current_branch}']
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        commits = result.stdout.strip()
-        return commits if commits else '- Initial commit for this task'
-    except subprocess.CalledProcessError:
-        return '- Initial commit for this task'
+          def get_commit_summary(base_branch, current_branch):
+              """Get commit summary since branching"""
+              cmd = ['git', 'log', '--pretty=format:- %s', f'{base_branch}..{current_branch}']
+              
+              try:
+                  result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                  commits = result.stdout.strip()
+                  return commits if commits else '- Initial commit for this task'
+              except subprocess.CalledProcessError:
+                  return '- Initial commit for this task'
 
-def find_epic_issue():
-    """Find the epic issue"""
-    cmd = ['gh', 'issue', 'list', '--search', 'Epic:', '--json', 'number']
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        issues = json.loads(result.stdout)
-        return issues[0]['number'] if issues else None
-    except subprocess.CalledProcessError:
-        return None
+          def find_epic_issue():
+              """Find the epic issue"""
+              cmd = ['gh', 'issue', 'list', '--search', 'Epic:', '--json', 'number']
+              
+              try:
+                  result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                  issues = json.loads(result.stdout)
+                  return issues[0]['number'] if issues else None
+              except subprocess.CalledProcessError:
+                  return None
 
-def create_pull_request(task_number, issue_number, issue_title, milestone_number, commits, base_branch, current_branch):
-    """Create the pull request"""
-    epic_number = find_epic_issue()
-    
-    # Clean up issue title for PR title
-    pr_title = issue_title.replace(f'Task {task_number}: ', '')
-    
-    pr_body = f"""## {issue_title}
+          def create_pull_request(task_number, issue_number, issue_title, milestone_number, commits, base_branch, current_branch):
+              """Create the pull request"""
+              epic_number = find_epic_issue()
+              
+              # Clean up issue title for PR title
+              pr_title = issue_title.replace(f'Task {task_number}: ', '')
+              
+              pr_body = f"""## {issue_title}
 
-### Description
-This PR implements the changes for {issue_title} as part of the Kiro-planned feature development.
+          ### Description
+          This PR implements the changes for {issue_title} as part of the Kiro-planned feature development.
 
-### Related Issues
-- Resolves #{issue_number}"""
-    
-    if epic_number:
-        pr_body += f"\\n- Related to Epic #{epic_number}"
-    
-    pr_body += f"""
+          ### Related Issues
+          - Resolves #{issue_number}"""
+              
+              if epic_number:
+                  pr_body += f"\\n- Related to Epic #{epic_number}"
+              
+              pr_body += f"""
 
-### Changes Made
-{commits}
+          ### Changes Made
+          {commits}
 
-### Testing Checklist
-- [ ] Unit tests added/updated
-- [ ] Integration tests pass
-- [ ] Manual testing completed
-- [ ] Edge cases tested
-- [ ] Error handling tested
+          ### Testing Checklist
+          - [ ] Unit tests added/updated
+          - [ ] Integration tests pass
+          - [ ] Manual testing completed
+          - [ ] Edge cases tested
+          - [ ] Error handling tested
 
-### Code Quality Checklist
-- [ ] Code follows project standards
-- [ ] TypeScript types properly defined
-- [ ] Error handling implemented
-- [ ] Loading states implemented
-- [ ] No console.log statements left in code
+          ### Code Quality Checklist
+          - [ ] Code follows project standards
+          - [ ] TypeScript types properly defined
+          - [ ] Error handling implemented
+          - [ ] Loading states implemented
+          - [ ] No console.log statements left in code
 
-### Review Checklist
-- [ ] Functionality matches requirements
-- [ ] Code is readable and maintainable
-- [ ] Performance considerations addressed
-- [ ] Security considerations addressed
-- [ ] Accessibility requirements met
+          ### Review Checklist
+          - [ ] Functionality matches requirements
+          - [ ] Code is readable and maintainable
+          - [ ] Performance considerations addressed
+          - [ ] Security considerations addressed
+          - [ ] Accessibility requirements met
 
-### Deployment Notes
-<!-- Add any special deployment considerations -->
+          ### Deployment Notes
+          <!-- Add any special deployment considerations -->
 
----
-*This PR was auto-generated from Kiro task tracking*"""
+          ---
+          *This PR was auto-generated from Kiro task tracking*"""
 
-    cmd = [
-        'gh', 'pr', 'create',
-        '--title', pr_title,
-        '--body', pr_body,
-        '--base', base_branch,
-        '--head', current_branch,
-        '--label', 'task,kiro-generated',
-        '--json', 'number', '--jq', '.number'
-    ]
-    
-    if milestone_number:
-        cmd.extend(['--milestone', str(milestone_number)])
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        pr_number = result.stdout.strip()
-        
-        # Link PR to issue
-        comment_cmd = ['gh', 'issue', 'comment', str(issue_number), '--body', f'🔗 Pull Request created: #{pr_number}']
-        subprocess.run(comment_cmd, check=True)
-        
-        print(f"✅ Created PR #{pr_number}: {pr_title}")
-        return pr_number
-    except subprocess.CalledProcessError as e:
-        print(f"Error creating PR: {e}")
-        return None
+              cmd = [
+                  'gh', 'pr', 'create',
+                  '--title', pr_title,
+                  '--body', pr_body,
+                  '--base', base_branch,
+                  '--head', current_branch,
+                  '--label', 'task,kiro-generated',
+                  '--json', 'number', '--jq', '.number'
+              ]
+              
+              if milestone_number:
+                  cmd.extend(['--milestone', str(milestone_number)])
+              
+              try:
+                  result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                  pr_number = result.stdout.strip()
+                  
+                  # Link PR to issue
+                  comment_cmd = ['gh', 'issue', 'comment', str(issue_number), '--body', f'🔗 Pull Request created: #{pr_number}']
+                  subprocess.run(comment_cmd, check=True)
+                  
+                  print(f"✅ Created PR #{pr_number}: {pr_title}")
+                  return pr_number
+              except subprocess.CalledProcessError as e:
+                  print(f"Error creating PR: {e}")
+                  return None
 
-# Main execution
-task_number = extract_task_number()
-if not task_number:
-    print("No task number found in branch name or input")
-    sys.exit(1)
+          # Main execution
+          task_number = extract_task_number()
+          if not task_number:
+              print("No task number found in branch name or input")
+              sys.exit(1)
 
-print(f"Task number: {task_number}")
+          print(f"Task number: {task_number}")
 
-branch_name = os.environ.get('GITHUB_REF_NAME', '')
-base_branch = os.environ.get('INPUT_BASE_BRANCH', 'main')
+          branch_name = os.environ.get('GITHUB_REF_NAME', '')
+          base_branch = os.environ.get('INPUT_BASE_BRANCH', 'main')
 
-# Check if PR already exists
-existing_pr = check_existing_pr(branch_name, base_branch)
-if existing_pr:
-    print(f"PR already exists: #{existing_pr}")
-    sys.exit(0)
+          # Check if PR already exists
+          existing_pr = check_existing_pr(branch_name, base_branch)
+          if existing_pr:
+              print(f"PR already exists: #{existing_pr}")
+              sys.exit(0)
 
-# Find corresponding issue
-issue_number, issue_title, milestone_number = find_issue_for_task(task_number)
-if not issue_number:
-    print(f"No open issue found for task {task_number}")
-    sys.exit(1)
+          # Find corresponding issue
+          issue_number, issue_title, milestone_number = find_issue_for_task(task_number)
+          if not issue_number:
+              print(f"No open issue found for task {task_number}")
+              sys.exit(1)
 
-print(f"Found issue #{issue_number}: {issue_title}")
+          print(f"Found issue #{issue_number}: {issue_title}")
 
-# Get commit summary
-commits = get_commit_summary(base_branch, branch_name)
+          # Get commit summary
+          commits = get_commit_summary(base_branch, branch_name)
 
-# Create PR
-pr_number = create_pull_request(
-    task_number, issue_number, issue_title, 
-    milestone_number, commits, base_branch, branch_name
-)
+          # Create PR
+          pr_number = create_pull_request(
+              task_number, issue_number, issue_title, 
+              milestone_number, commits, base_branch, branch_name
+          )
 
-if pr_number:
-    print(f"Successfully created PR #{pr_number}")
-else:
-    print("Failed to create PR")
-    sys.exit(1)
-PYTHON_SCRIPT
+          if pr_number:
+              print(f"Successfully created PR #{pr_number}")
+          else:
+              print("Failed to create PR")
+              sys.exit(1)
+          PYTHON_SCRIPT
 '''
     
     with open('.github/workflows/auto-pr-creation.yml', 'w') as f:
