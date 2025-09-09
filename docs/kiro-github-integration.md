@@ -50,7 +50,7 @@ Based on your File Action Bar example, here's how you'd use it:
    ```bash
    # Run the setup script
    chmod +x kiro-github-setup.py
-   ./kiro-github-setup.sh
+   ./kiro-github-setup.py
    ```
 
 2. **Create GitHub Issues** from your Kiro docs:
@@ -122,24 +122,22 @@ After generation:
 ```
 
 ### **4. Documentation**
-- `KIRO_GITHUB_INTEGRATION.md` - Complete usage guide
+- `docs/kiro-github-integration.md`- Complete usage guide
 - Inline documentation in all files
 
 ## 🚀 **How to Use It**
 
-1. **Save as `kiro-github-setup.sh`** in your project root (alongside your Kiro files)
+1. **Make executable and run**:
+```bash
+chmod +x kiro-github-setup.py
+./kiro-github-setup.py
+```
 
-2. **Make executable and run**:
-   ```bash
-   chmod +x kiro-github-setup.sh
-   ./kiro-github-setup.sh
-   ```
-
-3. **Follow the next steps** printed by the script:
-   ```bash
-   ./scripts/setup-kiro-feature.sh  # Creates all GitHub issues
-   ./scripts/create-task-branch.sh 04  # Start working on task 4
-   ```
+2. **Follow the next steps** printed by the script:
+```bash
+./scripts/setup-kiro-feature.sh  # Creates all GitHub issues
+./scripts/create-task-branch.sh 04  # Start working on task 4
+```
 
 ## ✨ **Key Features**
 
