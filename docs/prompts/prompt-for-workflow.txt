@@ -1,7 +1,14 @@
 I am evaluating Kiro from Amazon in the moment. The tool creates files for Requirements, 
-Design and a Task list in `.kiro/specs/file-action-bar`.
-How can I create a workflow for Github with creating issues, PRs and reviews from these 
-files? The planning process started with "I want to add an action bar on top of the Files page."
+Design and a Task list in `.kiro/specs/file-action-bar`. I asked an LLM:
+"How can I create a workflow for Github with creating issues, PRs and reviews from these 
+files?"
 
-I have two files in .github/workflows for a GitHub workflow that converts these structured 
-documents into GitHub issues, PRs, and reviews. The comparison script is
+The answer was splitted in multiple files.
+File docs/kiro-gitHub-integration.md has a description of the intended behavior.
+
+I saved two files in .github/workflows for a GitHub workflow that converts these structured 
+documents into GitHub issues, PRs, and reviews. The start script kiro-github-setup.sh shall
+create the needed structure and other files that are used to support the Github workflow. Can
+you help me to repair the script kiro-github-setup.sh because I get an error message:
+./kiro-github-setup.sh: line 229: syntax error near unexpected token `)'
+
