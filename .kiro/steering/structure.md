@@ -50,6 +50,8 @@ afs-spa/
 - **Core Services**: Authentication, HTTP interceptors, guards (providedIn: 'root' singletons)
 - **Feature Services**: Business logic for specific features
 - **Shared Services**: Utilities used across features
+- **Models**: Domain contracts in `src/app/core/models/`; UI-only view models in `src/app/shared/models/` (re-export via `shared/models/index.ts`)
+
 ## Naming Conventions
 
 - **Components**: PascalCase (e.g., `FilesComponent`)

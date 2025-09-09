@@ -22,6 +22,11 @@
 - **Linting**: Angular ESLint configuration
 - **IDE**: Support for Angular Language Service
 
+## Prerequisites
+
+- **Node.js**: 20.x LTS
+- **Package install**: `npm ci` for reproducible installs (CI and local)
+
 ## Common Commands
 
 ### Development
