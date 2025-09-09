@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
-import { catchError, retry } from 'rxjs/operators';
+import { catchError, retry, timeout, finalize } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   OperationProgress,
   RenameRequest,
