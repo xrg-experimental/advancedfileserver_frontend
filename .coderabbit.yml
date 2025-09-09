@@ -20,13 +20,15 @@ reviews:
     - "afs-spa/src/**"
     - "!afs-spa/dist/**"
     - "!afs-spa/node_modules/**"
-    - "!afs-spa/**/*.spec.ts"  # Include test files in reviews
+    - "!afs-spa/**/*.spec.ts"
     - "!**/*.min.js"
     - "!**/*.map"
+    - ".github/**"
     - ".kiro/**"
     - "docs/*"
     - "!docs/prompts/**"
     - "project-docs/**"
+    - "scripts/**"
     - ".coderabbit.yml"
 
   # Angular-specific path instructions

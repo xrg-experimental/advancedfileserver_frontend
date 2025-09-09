@@ -12,3 +12,25 @@ create the needed structure and other files that are used to support the Github 
 you help me to repair the script kiro-github-setup.sh because I get an error message:
 ./kiro-github-setup.sh: line 229: syntax error near unexpected token `)'
 
+The following files should be created identical when using kiro-github-setup.sh:
+.github/ISSUE_TEMPLATE/kiro-task.md .github/pull_request_template.md KIRO_GITHUB_INTEGRATION.md
+Update kiro-github-setup.py to recreate the same content.
+
+In docs/kiro-gitHub-integration.md around lines 15 to 20, the Auto PR Creation
+section lacks the exact branch-name pattern and detection logic; update the doc
+to explicitly state the branch-name. Add 
+"""
+on:
+  push:
+    branches:
+      - 'feature/task-*'   # or 'feature/task-[0-9][0-9]'
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+"""
+
+	modified:   .github/workflows/auto-pr-creation.yml
+	modified:   .github/workflows/kiro-integration.yml
+Update kiro-github-setup.py to create identical files .github/workflows/auto-pr-creation.yml and .github/workflows/kiro-integration.yml. 
+These files needed to be changed to make GitHub workflow run.
