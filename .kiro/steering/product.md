@@ -17,5 +17,5 @@ The system is transitioning from a traditional web application to a modern Singl
 - Role-based permissions and access control
 - Real-time system status monitoring
 - Secure authentication with OTP flow
-- Session management and active user tracking
-- Toast notifications for user feedback
+- Page-by-page directory navigation with breadcrumbs
+- Single-selection model for file items
