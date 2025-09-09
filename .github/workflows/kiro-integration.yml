@@ -144,27 +144,27 @@ jobs:
 
           epic_body = f"""## Epic: ${{ inputs.project_name }}
 
-### Overview
-This epic tracks the implementation of the ${{ inputs.project_name }} feature based on Kiro-generated planning documents.
-
-### Requirements Summary
-{requirements_summary}
-
-### Architecture Overview
-{architecture_overview}
-
-### Related Documents
-- [Requirements]({requirements_url})
-- [Design]({design_url})
-- [Tasks]({tasks_url})
-
-### Acceptance Criteria
-- [ ] All task items completed
-- [ ] Requirements validated
-- [ ] Code reviewed and approved
-- [ ] Tests passing
-
-*Auto-generated from Kiro planning documents*"""
+          ### Overview
+          This epic tracks the implementation of the ${{ inputs.project_name }} feature based on Kiro-generated planning documents.
+          
+          ### Requirements Summary
+          {requirements_summary}
+          
+          ### Architecture Overview
+          {architecture_overview}
+          
+          ### Related Documents
+          - [Requirements]({requirements_url})
+          - [Design]({design_url})
+          - [Tasks]({tasks_url})
+          
+          ### Acceptance Criteria
+          - [ ] All task items completed
+          - [ ] Requirements validated
+          - [ ] Code reviewed and approved
+          - [ ] Tests passing
+          
+          *Auto-generated from Kiro planning documents*"""
 
           # Create epic issue
           milestone_arg = []
@@ -277,24 +277,24 @@ This epic tracks the implementation of the ${{ inputs.project_name }} feature ba
             """Create a GitHub issue for a task"""
             issue_body = f"""## Task #{task['number']}: {task['title']}
 
-### Description
-{task['description'] if task['description'] else 'Implementation details to be determined during development.'}
-
-### Requirements Covered
-{task['requirements']}
-
-### Related Epic
-Part of epic #{epic_number}
-
-### Definition of Done
-- [ ] Implementation completed
-- [ ] Unit tests written and passing
-- [ ] Code reviewed
-- [ ] Requirements validated
-- [ ] Documentation updated
-
-*Auto-generated from Kiro tasks*
-"""
+            ### Description
+            {task['description'] if task['description'] else 'Implementation details to be determined during development.'}
+            
+            ### Requirements Covered
+            {task['requirements']}
+            
+            ### Related Epic
+            Part of epic #{epic_number}
+            
+            ### Definition of Done
+            - [ ] Implementation completed
+            - [ ] Unit tests written and passing
+            - [ ] Code reviewed
+            - [ ] Requirements validated
+            - [ ] Documentation updated
+            
+            *Auto-generated from Kiro tasks*
+            """
             
             labels = 'task,enhancement'
             if task['completed']:
