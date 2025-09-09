@@ -9,7 +9,7 @@ This repository has been set up with automated workflows to convert Kiro plannin
    ./scripts/setup-kiro-feature.sh
    ```
 
-2. **Create Task Branch**: 
+2. **Create Task Branch**:
    ```bash
    ./scripts/create-task-branch.sh <task_number>
    ```
@@ -20,7 +20,7 @@ This repository has been set up with automated workflows to convert Kiro plannin
 
 ### Files Structure
 - `.kiro/specs/file-action-bar/requirements.md` - Kiro requirements document
-- `.kiro/specs/file-action-bar/design.md` - Kiro design document  
+- `.kiro/specs/file-action-bar/design.md` - Kiro design document
 - `.kiro/specs/file-action-bar/tasks.md` - Kiro implementation tasks
 - `.github/workflows/` - Automated workflows
 - `scripts/` - Helper scripts
@@ -53,7 +53,7 @@ Features:
 - Links all issues together using issue references
 
 #### 2. Auto PR Creation
-**Trigger**: Push to `feature/task-*` or `task/*` branches  
+**Trigger**: Push to `feature/task-*` or `task/*` branches
 **Purpose**: Automatically creates PRs for task branches
 
 Features:
@@ -67,7 +67,7 @@ Features:
 
 Use these branch naming patterns for automatic PR creation:
 - `feature/task-01` - Feature branch for task 1
-- `task/05` - Task branch for task 5  
+- `task/05` - Task branch for task 5
 - `feat/task-12` - Alternative feature branch
 
 ### Issue Management
