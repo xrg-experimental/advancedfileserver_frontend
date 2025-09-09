@@ -257,7 +257,10 @@ jobs:
               issue_url = result.stdout.strip()
               
               # Extract issue number from URL
-              epic_number = issue_url.split('/')[-1] if issue_url else None
+              epic_number = issue_url.rsplit('/', 1)[-1] if issue_url else None
+              if epic_number and not epic_number.isdigit():
+                  print(f"Unexpected issue URL format: {issue_url}")
+                  sys.exit(1)
               
               if epic_number:
                   print(f"issue_number={epic_number}")
