@@ -33,17 +33,18 @@ export class FileOperationService {
 
     this.logger.debug('FileOperationService: Renaming item', { oldPath, newName });
 
-    return this.http.post<OperationResponse>('/files/rename', request)
-      .pipe(
-        retry({
-          count: 2,
-          delay: (error, retryCount) => {
-            this.logger.warn(`Rename operation failed, retry ${retryCount}`, { error });
-            return timer(1000 * retryCount); // Exponential backoff
-          }
-        }),
-        catchError(error => this.handleOperationError('rename', error))
-      );
+    return this.http.post<OperationResponse>('/files/rename', request).pipe(
+      timeout(10000),
+      retry({
+        count: 2,
+        delay: (_error, retryCount) => {
+          this.logger.warn(`Rename operation failed, retry ${retryCount}`);
+          return timer(1000 * retryCount);
+        }
+      }),
+      catchError(error => this.handleOperationError('rename', error)),
+      finalize(() => this.cleanupCompletedOperations())
+    );
   }
 
   /**
