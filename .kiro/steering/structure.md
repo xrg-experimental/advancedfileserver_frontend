@@ -47,10 +47,9 @@ afs-spa/
   - `component.spec.ts` - Unit tests
 
 ### Service Organization
-- **Core Services**: Authentication, HTTP interceptors, guards
+- **Core Services**: Authentication, HTTP interceptors, guards (providedIn: 'root' singletons)
 - **Feature Services**: Business logic for specific features
 - **Shared Services**: Utilities used across features
-
 ## Naming Conventions
 
 - **Components**: PascalCase (e.g., `FilesComponent`)
