@@ -1,0 +1,7 @@
+I am evaluating Kiro from Amazon in the moment. The tool creates files for Requirements, 
+Design and a Task list in `.kiro/specs/file-action-bar`.
+How can I create a workflow for Github with creating issues, PRs and reviews from these 
+files? The planning process started with "I want to add an action bar on top of the Files page."
+
+I have two files in .github/workflows for a GitHub workflow that converts these structured 
+documents into GitHub issues, PRs, and reviews. The comparison script is
