@@ -115,6 +115,12 @@ scripts/
 └── setup-kiro-feature.sh       # One-command project setup
 ```
 
+After generation:
+```bash
+  chmod +x scripts/*.sh
+  git update-index --chmod=+x scripts/*.sh
+```
+
 ### **4. Documentation**
 - `KIRO_GITHUB_INTEGRATION.md` - Complete usage guide
 - Inline documentation in all files
