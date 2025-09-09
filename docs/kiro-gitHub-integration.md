@@ -23,7 +23,7 @@ planning documents with GitHub. Here's what the solution provides:
 on:
   push:
     branches:
-      - 'feature/task-*'   # or 'feature/task-[0-9][0-9]'
+      - 'feature/task-[0-9][0-9]'
       - 'task/*'
       - 'feat/task-*'
 permissions:
@@ -34,7 +34,7 @@ permissions:
 
 ### **3. Helper Scripts**
 - `create-task-branch.sh` - Creates properly named branches for tasks
-- `setup-kiro-feature.sh` - One-command setup for new features
+- `setup-kiro-feature.py` - One-command setup for new features
 - Complete setup script that installs everything
 
 ### **4. GitHub Templates**
@@ -49,7 +49,7 @@ Based on your File Action Bar example, here's how you'd use it:
 1. **Initial Setup** (one time):
    ```bash
    # Run the setup script
-   chmod +x kiro-github-setup.sh
+   chmod +x kiro-github-setup.py
    ./kiro-github-setup.sh
    ```
 
