@@ -82,3 +82,26 @@ export interface OperationResponse {
   message?: string;
   error?: string;
 }
+
+// Action configuration interfaces
+export interface ActionConfig {
+  id: string;
+  label: string;
+  icon: string;
+  enabled: boolean;
+  visible: boolean;
+  requiresSelection: boolean;
+  supportedTypes: ('file' | 'folder')[];
+  requiredPermissions: string[];
+}
+
+export interface NavigationState {
+  currentPath: string;
+  breadcrumbs: BreadcrumbItem[];
+  canNavigateUp: boolean;
+}
+
+export interface BreadcrumbItem {
+  name: string;
+  path: string;
+}

@@ -1,0 +1,1 @@
+export { FileActionBarComponent } from './file-action-bar.component';

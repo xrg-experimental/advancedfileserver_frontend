@@ -1,0 +1,132 @@
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 16px;
+  border-radius: 4px 4px 0 0;
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .action-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 120px;
+      height: 36px;
+      font-size: 14px;
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .button-label {
+        font-weight: 500;
+      }
+
+      &.primary-action {
+        background-color: #e91e63;
+        color: white;
+
+        &:hover:not(:disabled) {
+          background-color: #c2185b;
+        }
+      }
+
+      &.danger-action {
+        background-color: #f44336;
+        color: white;
+
+        &:hover:not(:disabled) {
+          background-color: #d32f2f;
+        }
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      &:not(.primary-action):not(.danger-action) {
+        background-color: white;
+        color: #333;
+        border: 1px solid #ddd;
+
+        &:hover:not(:disabled) {
+          background-color: #f5f5f5;
+        }
+      }
+    }
+  }
+
+  .selection-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #e3f2fd;
+    border-radius: 4px;
+    color: #1976d2;
+    font-size: 14px;
+
+    .selection-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .selection-text {
+      font-weight: 500;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .action-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+
+    .action-buttons {
+      justify-content: center;
+      
+      .action-button {
+        flex: 1;
+        min-width: 100px;
+      }
+    }
+
+    .selection-info {
+      justify-content: center;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .action-bar {
+    padding: 12px;
+
+    .action-buttons {
+      .action-button {
+        .button-label {
+          display: none;
+        }
+        
+        min-width: 48px;
+        justify-content: center;
+      }
+    }
+  }
+}
