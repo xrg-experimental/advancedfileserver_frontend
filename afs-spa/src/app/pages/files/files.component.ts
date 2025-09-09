@@ -2,10 +2,15 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-
 import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
 import { FileService } from '../../core/services/file.service';
 import { FileNode } from '../../core/models/file.model';
+
+interface BreadcrumbItem {
+  name: string;
+  path: string;
+}
 
 @Component({
   selector: 'app-files',
@@ -14,15 +19,21 @@ import { FileNode } from '../../core/models/file.model';
     CommonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatButtonModule
+    MatButtonModule,
+    MatChipsModule
   ],
   templateUrl: './files.component.html',
   styleUrl: './files.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FilesComponent implements OnInit {
-  fileTree: FileNode[] = [];
-  flatTree: FileNode[] = [];
+  // Page-by-page navigation state
+  currentPath = '/';
+  fileList: FileNode[] = [];
+  selectedItem: FileNode | null = null;
+  breadcrumbs: BreadcrumbItem[] = [];
+  
+  // Loading and error state
   isLoading = false;
   error: string | null = null;
 
@@ -31,102 +42,150 @@ export class FilesComponent implements OnInit {
   trackByPath = (_: number, item: { path: string }) => item.path;
 
   ngOnInit(): void {
-    this.loadRootFiles();
+    this.navigateToPath('/');
   }
 
-  toggleFolder(folder: FileNode): void {
-    if (folder.type !== 'folder') {
-      return;
+  /**
+   * Navigate to a specific directory path
+   */
+  navigateToPath(path: string): void {
+    this.currentPath = path;
+    this.selectedItem = null; // Reset selection when navigating
+    this.generateBreadcrumbs();
+    this.loadCurrentDirectory();
+  }
+
+  /**
+   * Navigate up one directory level
+   */
+  navigateUp(): void {
+    if (this.canNavigateUp()) {
+      const parentPath = this.getParentPath(this.currentPath);
+      this.navigateToPath(parentPath);
+    }
+  }
+
+  /**
+   * Check if navigation up is possible
+   */
+  canNavigateUp(): boolean {
+    return this.currentPath !== '/';
+  }
+
+  /**
+   * Handle item selection (single selection only)
+   */
+  selectItem(item: FileNode): void {
+    // Clear previous selection
+    if (this.selectedItem) {
+      this.selectedItem.selected = false;
     }
 
-    if (folder.loading) {
-      // Avoid duplicate in-flight requests
-      return;
-    }
-
-    if (folder.expanded) {
-      // Collapse folder
-      folder.expanded = false;
-      this.updateFlatTree();
-      this.cdr.markForCheck();
+    // Set new selection
+    if (this.selectedItem === item) {
+      // Deselect if clicking the same item
+      this.selectedItem = null;
     } else {
-      // Expand folder - load children if not loaded
-      if (folder.children === undefined) {
-        folder.expanded = true; // show spinner immediately
-        this.updateFlatTree();
-        this.cdr.markForCheck();
-        this.loadFolderContents(folder);
-      } else {
-        folder.expanded = true;
-        this.updateFlatTree();
-        this.cdr.markForCheck();
-      }
+      this.selectedItem = item;
+      item.selected = true;
+    }
+
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Handle double-click on items (navigate into folders)
+   */
+  onItemDoubleClick(item: FileNode): void {
+    if (item.type === 'folder') {
+      this.navigateToPath(item.path);
     }
   }
 
-  private loadRootFiles(): void {
+  /**
+   * Navigate to a breadcrumb path
+   */
+  navigateToBreadcrumb(breadcrumb: BreadcrumbItem): void {
+    this.navigateToPath(breadcrumb.path);
+  }
+
+  /**
+   * Load files for the current directory
+   */
+  private loadCurrentDirectory(): void {
     this.isLoading = true;
     this.error = null;
 
-    this.fileService.getFiles('/').subscribe({
+    this.fileService.getFiles(this.currentPath).subscribe({
       next: (files) => {
-        this.fileTree = this.processFiles(files, 0);
+        this.fileList = this.processFiles(files);
         this.isLoading = false;
-        this.updateFlatTree();
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading root files:', err);
-        this.error = `Failed to load files: ${err.message || 'Unknown error'}`;
+        console.error(`Error loading directory ${this.currentPath}:`, err);
+        this.error = `Failed to load directory: ${err.message || 'Unknown error'}`;
         this.isLoading = false;
         this.cdr.markForCheck();
       }
     });
   }
 
-  private processFiles(files: FileNode[], level: number): FileNode[] {
-    return files.map(file => {
-      const node: FileNode = {
-        ...file,
-        level,
-        expanded: false,
-        loading: false
-      };
-      // children === undefined => not yet loaded; [] => loaded but empty
-      if (file.type === 'folder') node.children = undefined;
-      return node;
-    });
+  /**
+   * Process files for display (remove tree-specific properties)
+   */
+  private processFiles(files: FileNode[]): FileNode[] {
+    return files.map(file => ({
+      ...file,
+      selected: false,
+      // Remove tree-specific properties
+      expanded: undefined,
+      loading: undefined,
+      level: undefined,
+      children: undefined
+    }));
   }
 
-  private loadFolderContents(folder: FileNode): void {
-    folder.loading = true;
+  /**
+   * Generate breadcrumb navigation items
+   */
+  private generateBreadcrumbs(): void {
+    this.breadcrumbs = [];
+    
+    if (this.currentPath === '/') {
+      this.breadcrumbs.push({ name: 'Root', path: '/' });
+      return;
+    }
 
-    this.fileService.getFiles(folder.path).subscribe({
-      next: (files) => {
-        folder.children = this.processFiles(files, (folder.level || 0) + 1);
-        folder.loading = false;
-        this.updateFlatTree();
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        console.error(`Error loading folder contents for ${folder.path}:`, err);
-        folder.loading = false;
-        // You might want to show a toast notification here
-        this.updateFlatTree();
-        this.cdr.markForCheck();
-      }
-    });
+    // Add root
+    this.breadcrumbs.push({ name: 'Root', path: '/' });
+
+    // Split path and build breadcrumbs
+    const pathParts = this.currentPath.split('/').filter(part => part.length > 0);
+    let currentPath = '';
+
+    for (const part of pathParts) {
+      currentPath += '/' + part;
+      this.breadcrumbs.push({
+        name: part,
+        path: currentPath
+      });
+    }
   }
 
-  private updateFlatTree(): void {
-    const out: FileNode[] = [];
-    const flatten = (nodes: FileNode[]) => {
-      for (const n of nodes) {
-        out.push(n);
-        if (n.expanded && n.children) flatten(n.children);
-      }
-    };
-    flatten(this.fileTree);
-    this.flatTree = out;
+  /**
+   * Get parent directory path
+   */
+  private getParentPath(path: string): string {
+    if (path === '/') {
+      return '/';
+    }
+
+    const lastSlashIndex = path.lastIndexOf('/');
+    if (lastSlashIndex === 0) {
+      return '/';
+    }
+
+    return path.substring(0, lastSlashIndex);
   }
 }

@@ -1,40 +1,48 @@
 <div class="files-container">
+  <!-- Navigation Header -->
+  <div class="navigation-header">
+    <!-- Up Navigation Button -->
+    <button mat-icon-button 
+            class="nav-up-button"
+            [disabled]="!canNavigateUp"
+            (click)="navigateUp()"
+            title="Go up one level">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb-container">
+      <mat-chip-set class="breadcrumb-chips">
+        <mat-chip *ngFor="let breadcrumb of breadcrumbs; let last = last"
+                  [class.current-path]="last"
+                  (click)="!last && navigateToBreadcrumb(breadcrumb)">
+          {{ breadcrumb.name }}
+        </mat-chip>
+      </mat-chip-set>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
   <div *ngIf="isLoading" class="loading-overlay">
     <mat-spinner diameter="40"></mat-spinner>
   </div>
 
+  <!-- Error Message -->
   <div *ngIf="error" class="error-message">
     {{ error }}
   </div>
 
-  <div class="file-tree" *ngIf="!isLoading && !error">
-    <div *ngFor="let item of flatTree; trackBy: trackByPath"
+  <!-- File List -->
+  <div class="file-list" *ngIf="!isLoading && !error">
+    <div *ngFor="let item of fileList; trackBy: trackByPath"
          class="file-item"
          [class.folder]="item.type === 'folder'"
-         [class.loading]="item.loading"
-         [style.padding-left.px]="(item.level || 0) * 16">
-
-      <!-- Expand/Collapse button for folders -->
-      <button *ngIf="item.type === 'folder'"
-              mat-icon-button
-              class="expand-button"
-              type="button"
-              (click)="!item.loading && toggleFolder(item)"
-              [disabled]="item.loading">
-        <span class="cdk-visually-hidden">
-          {{ item.expanded ? 'Collapse folder' : 'Expand folder' }}
-        </span>
-        <mat-icon aria-hidden="true" *ngIf="!item.loading">
-          {{ item.expanded ? 'expand_less' : 'expand_more' }}
-        </mat-icon>
-        <mat-spinner *ngIf="item.loading" diameter="16"></mat-spinner>
-      </button>
-
-      <!-- Spacer for files (to align with folders) -->
-      <div *ngIf="item.type === 'file'" class="file-spacer"></div>
+         [class.selected]="item.selected"
+         (click)="selectItem(item)"
+         (dblclick)="onItemDoubleClick(item)">
 
       <!-- File/Folder icon and name -->
-      <div class="file-content" (click)="item.type === 'folder' && !item.loading && toggleFolder(item)">
+      <div class="file-content">
         <mat-icon class="file-icon">
           {{ item.type === 'folder' ? 'folder' : 'insert_drive_file' }}
         </mat-icon>
@@ -42,7 +50,16 @@
         <span *ngIf="item.type === 'file' && item.size != null" class="file-size">
           {{ item.size | number }} bytes
         </span>
+        <span *ngIf="item.modified" class="file-modified">
+          {{ item.modified | date:'short' }}
+        </span>
       </div>
+    </div>
+
+    <!-- Empty Directory Message -->
+    <div *ngIf="fileList.length === 0" class="empty-directory">
+      <mat-icon class="empty-icon">folder_open</mat-icon>
+      <p>This directory is empty</p>
     </div>
   </div>
 </div>

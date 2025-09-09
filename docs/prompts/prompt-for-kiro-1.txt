@@ -10,20 +10,20 @@ I want to simplify the interface and allow only one file or
 directory to be selected at a time.
 
 I don't want the action bar to change the place of buttons.
-Therefore I prefere to disable non-relevant buttons instead of
+Therefore, I prefer to disable non-relevant buttons instead of
 hiding them.
 
 No keyboard shortcuts.
 
-The actual files view has a tree as structure. I think it's
+The actual files view has a tree as a structure. I think it's
 best to change this to have a directory for which all entries
 are visible and the user can go up or down in the hierarchy
-page by page. Does this has an influence on thi requirements
+page by page. Does this have an influence on the requirements
 document?
 
 File upload and file download may take a long time depending
 on the file size. Suggest some type of background process with
-progress indicator and optional interrupt possibility. All
+ a progress indicator and optional interrupt possibility. All
 other actions shall work immediately.
 
 # Design

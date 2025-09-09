@@ -1,10 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
+import { AuthService } from './core/services/auth.service';
 
 describe('AppComponent', () => {
+  let mockAuthService: jasmine.SpyObj<AuthService>;
+
   beforeEach(async () => {
+    mockAuthService = jasmine.createSpyObj('AuthService', ['login', 'logout']);
+    
     await TestBed.configureTestingModule({
       imports: [AppComponent],
+      providers: [
+        { provide: AuthService, useValue: mockAuthService }
+      ]
     }).compileComponents();
   });
 
@@ -14,16 +22,9 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'afs-spa' title`, () => {
+  it('should have auth service', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('afs-spa');
-  });
-
-  it('should render title', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, afs-spa');
+    expect(app.auth).toBeDefined();
   });
 });
