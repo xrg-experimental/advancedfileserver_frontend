@@ -23,7 +23,7 @@ reviews:
     - "!afs-spa/**/*.spec.ts"
     - "!**/*.min.js"
     - "!**/*.map"
-    - ".github/**"
+    - ".github/workflows/**"
     - ".kiro/**"
     - "docs/*"
     - "!docs/prompts/**"
