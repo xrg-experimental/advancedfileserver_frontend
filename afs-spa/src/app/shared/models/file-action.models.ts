@@ -4,7 +4,7 @@
  * needed for selection state, permissions, and action configuration.
  */
 
-import { FileNode } from '../../core/models/file.model';
+import { FileNode, FilePermissions } from '../../core/models/file.model';
 
 /**
  * Extended FileNode interface with selection state and permissions
@@ -17,22 +17,7 @@ export interface ExtendedFileNode extends FileNode {
   permissions?: FilePermissions;
 }
 
-/**
- * File permissions interface defining what operations are allowed
- * Based on requirements 4.1, 4.2, 4.3 for permission-based action visibility
- */
-export interface FilePermissions {
-  /** Can read/view the file or folder contents */
-  canRead: boolean;
-  /** Can write/modify the file or folder */
-  canWrite: boolean;
-  /** Can delete the file or folder */
-  canDelete: boolean;
-  /** Can share the file or folder with others */
-  canShare: boolean;
-  /** Can upload files to this directory (only applicable to folders) */
-  canUpload: boolean;
-}
+
 
 /**
  * Navigation state for page-by-page directory browsing
@@ -43,7 +28,7 @@ export interface NavigationState {
   currentPath: string;
   /** Breadcrumb items for navigation */
   breadcrumbs: BreadcrumbItem[];
-  /** Whether user can navigate up from current directory */
+  /** Whether a user can navigate up from the current directory */
   canNavigateUp: boolean;
 }
 
@@ -57,30 +42,7 @@ export interface BreadcrumbItem {
   path: string;
 }
 
-/**
- * Progress tracking for long-running operations like upload/download
- * Based on requirement 6.1-6.6 for progress monitoring and cancellation
- */
-export interface OperationProgress {
-  /** Unique identifier for this operation */
-  id: string;
-  /** Type of operation being performed */
-  type: 'upload' | 'download';
-  /** Name of the file being processed */
-  fileName: string;
-  /** Progress percentage (0-100) */
-  progress: number;
-  /** Current status of the operation */
-  status: 'pending' | 'in-progress' | 'completed' | 'error' | 'cancelled';
-  /** Error message if status is 'error' */
-  error?: string;
-  /** Estimated time remaining in seconds */
-  estimatedTimeRemaining?: number;
-  /** Number of bytes transferred so far */
-  bytesTransferred?: number;
-  /** Total number of bytes to transfer */
-  totalBytes?: number;
-}
+
 
 /**
  * Configuration for action buttons in the action bar
