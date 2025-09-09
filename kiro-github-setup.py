@@ -464,7 +464,7 @@ jobs:
               try:
                   result = subprocess.run(cmd, capture_output=True, text=True, check=True)
                   prs = json.loads(result.stdout)
-                  return prs[0]['number'] if p rs else None
+                  return prs[0]['number'] if prs else None
               except subprocess.CalledProcessError:
                   return None
 
@@ -624,23 +624,31 @@ assignees: ''
 ---
 
 ## Task Description
-<!-- Detailed description of the task -->
+<!-- Detailed description of the task from Kiro tasks.md -->
 
 ## Requirements Covered
-<!-- List the requirement IDs this task addresses -->
+<!-- List the requirement IDs this task addresses from Kiro requirements.md -->
 
 ## Definition of Done
 - [ ] Implementation completed
 - [ ] Unit tests written and passing
 - [ ] Code reviewed and approved
-- [ ] Requirements validated
+- [ ] Requirements validated against Kiro specifications
 - [ ] Documentation updated
 
 ## Related Epic
-<!-- Link to the related epic issue -->
+<!-- This will be automatically filled: Part of epic #[EPIC_NUMBER] -->
+
+## Kiro Planning References
+- [Requirements](.kiro/specs/file-action-bar/requirements.md)
+- [Design](.kiro/specs/file-action-bar/design.md)
+- [Tasks](.kiro/specs/file-action-bar/tasks.md)
 
 ## Additional Context
-<!-- Any additional context or notes -->
+<!-- Any additional context or notes specific to this task -->
+
+---
+*This issue was auto-generated from Kiro planning documents*
 '''
     
     with open('.github/ISSUE_TEMPLATE/kiro-task.md', 'w') as f:
@@ -656,6 +664,11 @@ Brief description of the changes implemented in this PR.
 - Resolves #[ISSUE_NUMBER]
 - Related to Epic #[EPIC_NUMBER]
 
+### Kiro Planning References
+- [Requirements](.kiro/specs/file-action-bar/requirements.md)
+- [Design](.kiro/specs/file-action-bar/design.md)
+- [Tasks](.kiro/specs/file-action-bar/tasks.md)
+
 ### Changes Made
 - [ ] Component implementation
 - [ ] Service implementation  
@@ -663,6 +676,15 @@ Brief description of the changes implemented in this PR.
 - [ ] Styling updates
 - [ ] API integration
 - [ ] Tests added
+
+### Requirements Validation
+<!-- Check off requirements from Kiro requirements.md that this PR addresses -->
+- [ ] Requirement 1: User interface requirements met
+- [ ] Requirement 2: Selection state requirements met
+- [ ] Requirement 3: File operations requirements met
+- [ ] Requirement 4: Permissions requirements met
+- [ ] Requirement 5: Visual feedback requirements met
+- [ ] Requirement 6: Progress tracking requirements met
 
 ### Testing Checklist
 - [ ] Unit tests added/updated
@@ -679,8 +701,8 @@ Brief description of the changes implemented in this PR.
 - [ ] No console.log statements left
 
 ### Review Checklist
-- [ ] Functionality matches requirements
-- [ ] Code is readable and maintainable
+- [ ] Functionality matches Kiro requirements
+- [ ] Code follows Kiro design specifications
 - [ ] Performance considerations addressed
 - [ ] Security considerations addressed
 - [ ] Accessibility requirements met
@@ -690,6 +712,9 @@ Brief description of the changes implemented in this PR.
 
 ### Deployment Notes
 <!-- Any special deployment considerations -->
+
+---
+*This PR was created as part of Kiro-planned feature development*
 '''
     
     with open('.github/pull_request_template.md', 'w') as f:
@@ -793,6 +818,21 @@ This repository has been set up with automated workflows to convert Kiro plannin
 - `.github/workflows/` - Automated workflows
 - `scripts/` - Helper scripts
 
+### Epic and Task Linking Implementation
+
+**Epic Structure:**
+- **GitHub Construct**: Standard GitHub Issue with labels `epic,enhancement`
+- **Title Format**: "Epic: [Project Name]" (e.g., "Epic: File Action Bar")
+- **Linking Method**: Task issues reference the epic using issue body text
+
+**Task Structure:**
+- **GitHub Construct**: Standard GitHub Issues with labels `task,enhancement`
+- **Title Format**: "Task [NUMBER]: [Title]" (e.g., "Task 04: Create FileActionBarComponent")
+- **Epic Link**: Each task issue body contains "Part of epic #[EPIC_NUMBER]"
+
+**Example Linking:**
+Epic issue #15 "Epic: File Action Bar" is referenced by task issue #16 "Task 04: Create FileActionBarComponent" which contains "Part of epic #15" in its description, creating clickable backlinks in GitHub's interface.
+
 ### Automated Workflows
 
 #### 1. Kiro Integration Workflow
@@ -803,17 +843,18 @@ Features:
 - Creates epic issue from requirements/design
 - Creates individual task issues
 - Sets up milestone tracking
-- Links all issues together
+- Links all issues together using issue references
 
 #### 2. Auto PR Creation
 **Trigger**: Push to `feature/task-*` or `task/*` branches  
 **Purpose**: Automatically creates PRs for task branches
 
 Features:
-- Links PR to related issue
+- Links PR to related issue using "Resolves #[ISSUE_NUMBER]"
+- Links PR to epic using "Related to Epic #[EPIC_NUMBER]"
 - Generates PR description from commits
-- Adds appropriate labels
-- Sets up review checklist
+- Adds appropriate labels (`task,kiro-generated`)
+- Sets up comprehensive review checklist
 
 ### Branch Naming Convention
 
@@ -826,10 +867,11 @@ Use these branch naming patterns for automatic PR creation:
 
 Issues are automatically created with:
 - Task number and title from Kiro tasks
-- Requirements coverage information
+- Requirements coverage information from Kiro requirements.md
 - Definition of done checklist
-- Links to epic and related documents
-- Appropriate labels and milestones
+- Links to epic and related Kiro documents
+- Appropriate labels (`task,enhancement` or `epic,enhancement`)
+- Milestone assignment (if specified)
 
 ### Usage Tips
 
@@ -845,24 +887,39 @@ You can customize the integration by:
 - Modifying workflow files in `.github/workflows/`
 - Updating templates in `.github/ISSUE_TEMPLATE/` and `.github/PULL_REQUEST_TEMPLATE/`
 - Adjusting helper scripts in `scripts/`
+- Changing Kiro file paths in workflow inputs
 
 ### Requirements
 
 - GitHub CLI (`gh`) installed and authenticated
 - Python 3.x
 - Proper repository permissions (issues, PRs, workflows)
+- Kiro planning documents in `.kiro/specs/file-action-bar/` directory
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Workflow fails**: Check that all Kiro files exist and are properly formatted
+1. **Workflow fails**: Check that all Kiro files exist at `.kiro/specs/file-action-bar/` and are properly formatted
 2. **Issues not created**: Verify GitHub token permissions include issues and milestones
-3. **Auto PR fails**: Ensure branch naming follows the convention
+3. **Auto PR fails**: Ensure branch naming follows the convention (`feature/task-XX`, `task/XX`, `feat/task-XX`)
+4. **Epic linking broken**: Check that epic issue was created first and task issues reference the correct epic number
+
+### File Path Issues
+
+The workflows expect Kiro files at:
+- `.kiro/specs/file-action-bar/requirements.md`
+- `.kiro/specs/file-action-bar/design.md`
+- `.kiro/specs/file-action-bar/tasks.md`
+
+If your files are in different locations, update the workflow inputs in `scripts/setup-kiro-feature.sh`.
 
 ### Getting Help
 
-Check the workflow logs in the Actions tab for detailed error information.
+Check the workflow logs in the Actions tab for detailed error information. Look for:
+- File not found errors (check paths)
+- GitHub API errors (check permissions)
+- Task parsing errors (check tasks.md format)
 '''
     
     with open('KIRO_GITHUB_INTEGRATION.md', 'w') as f:
