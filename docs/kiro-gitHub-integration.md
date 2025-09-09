@@ -18,6 +18,20 @@ planning documents with GitHub. Here's what the solution provides:
 - Links PRs to the corresponding GitHub issues
 - Generates comprehensive PR descriptions with checklists
 
+**Branch Detection Configuration:**
+```yaml
+on:
+  push:
+    branches:
+      - 'feature/task-*'   # or 'feature/task-[0-9][0-9]'
+      - 'task/*'
+      - 'feat/task-*'
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+```
+
 ### **3. Helper Scripts**
 - `create-task-branch.sh` - Creates properly named branches for tasks
 - `setup-kiro-feature.sh` - One-command setup for new features
