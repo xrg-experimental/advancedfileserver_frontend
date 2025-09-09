@@ -162,8 +162,7 @@ jobs:
                   '--body', pr_body,
                   '--base', base_branch,
                   '--head', current_branch,
-                  '--label', 'task,kiro-generated',
-                  '--json', 'number', '--jq', '.number'
+                  '--label', 'task,kiro-generated'
               ]
               
               if milestone_number:
@@ -171,13 +170,20 @@ jobs:
               
               try:
                   result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-                  pr_number = result.stdout.strip()
+                  # Extract PR number from the output URL
+                  pr_url = result.stdout.strip()
+                  pr_number = pr_url.split('/')[-1] if pr_url else None
                   
-                  # Link PR to issue
-                  comment_cmd = ['gh', 'issue', 'comment', str(issue_number), '--body', f'🔗 Pull Request created: #{pr_number}']
-                  subprocess.run(comment_cmd, check=True)
+                  if pr_number:
+                      # Link PR to issue
+                      comment_cmd = ['gh', 'issue', 'comment', str(issue_number), '--body', f'🔗 Pull Request created: #{pr_number}']
+                      subprocess.run(comment_cmd, check=True)
+                      
+                      print(f"✅ Created PR #{pr_number}: {pr_title}")
+                  else:
+                      print(f"✅ Created PR: {pr_title}")
+                      print(f"PR URL: {pr_url}")
                   
-                  print(f"✅ Created PR #{pr_number}: {pr_title}")
                   return pr_number
               except subprocess.CalledProcessError as e:
                   print(f"Error creating PR: {e}")
