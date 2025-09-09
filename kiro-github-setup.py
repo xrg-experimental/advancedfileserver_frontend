@@ -624,11 +624,11 @@ jobs:
               try:
                   result = subprocess.run(cmd, capture_output=True, text=True, check=True)
                   # Extract PR URL from output
-                  pr_url = result.stdout.strip()
+                  pr_url = (result.stdout or "").strip()
                   
                   if pr_url:
                       # Extract PR number from URL
-                      pr_number = pr_url.split('/')[-1] if '/' in pr_url else None
+                      pr_number = pr_url.rsplit('/', 1)[-1] if pr_url.startswith('http') else None
                       
                       if pr_number and issue_number:
                           # Link PR to issue
