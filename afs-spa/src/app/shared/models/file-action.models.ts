@@ -25,11 +25,11 @@ export interface ExtendedFileNode extends FileNode {
  */
 export interface NavigationState {
   /** Current directory path being viewed */
-  currentPath: string;
+  readonly currentPath: string;
   /** Breadcrumb items for navigation */
-  breadcrumbs: BreadcrumbItem[];
+  readonly breadcrumbs: ReadonlyArray<BreadcrumbItem>;
   /** Whether a user can navigate up from the current directory */
-  canNavigateUp: boolean;
+  readonly canNavigateUp: boolean;
 }
 
 /**
