@@ -50,19 +50,19 @@ export interface BreadcrumbItem {
  */
 export interface ActionConfig {
   /** Unique identifier for the action */
-  id: string;
+  readonly id: string; // consider a shared union of allowed ids
   /** Display label for the action button */
-  label: string;
+  readonly label: string;
   /** Material icon name for the action button */
-  icon: string;
+  readonly icon: string; // consider a union of allowed Material icons used
   /** Whether the action is currently enabled */
-  enabled: boolean;
+  readonly enabled: boolean;
   /** Whether the action should be visible */
-  visible: boolean;
+  readonly visible: boolean;
   /** Whether this action requires a file/folder to be selected */
-  requiresSelection: boolean;
+  readonly requiresSelection: boolean;
   /** File/folder types this action supports */
-  supportedTypes: ('file' | 'folder')[];
+  readonly supportedTypes: ReadonlyArray<FileNode['type']>;
   /** Permissions required to perform this action */
-  requiredPermissions: (keyof FilePermissions)[];
+  readonly requiredPermissions: ReadonlyArray<keyof FilePermissions>;
 }
