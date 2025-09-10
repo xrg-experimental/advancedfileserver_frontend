@@ -3,7 +3,7 @@ import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
 import { catchError, retry, timeout, finalize, takeUntil, map } from 'rxjs/operators';
-import { HttpEventType, HttpRequest, HttpClient } from '@angular/common/http';
+import { HttpEventType, HttpRequest, HttpClient, HttpParams } from '@angular/common/http';
 import {
   OperationProgress,
   RenameRequest,
@@ -31,11 +31,16 @@ export class FileOperationService {
    * Rename a file or directory
    */
   renameItem(oldPath: string, newName: string): Observable<OperationResponse> {
-    const request: RenameRequest = { path: oldPath, newName };
+    // Server expects POST with query parameters (?path=...&newName=...)
+    const params = new HttpParams()
+      .set('path', oldPath)
+      .set('newName', newName);
 
     this.logger.debug('FileOperationService: Renaming item', { oldPath, newName });
 
-    return this.http.post<OperationResponse>('/files/rename', request).pipe(
+    const url = this.http.getFullUrl('/files/rename');
+
+    return this.httpClient.post<OperationResponse>(url, null, { params }).pipe(
       timeout(10000),
       retry({
         count: 2,

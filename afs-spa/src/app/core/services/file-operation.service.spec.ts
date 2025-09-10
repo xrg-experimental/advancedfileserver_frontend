@@ -14,7 +14,7 @@ describe('FileOperationService', () => {
 
   beforeEach(() => {
     const httpSpy = jasmine.createSpyObj('HttpService', ['post', 'getFullUrl']);
-    const httpClientSpyObj = jasmine.createSpyObj('HttpClient', ['request', 'get']);
+    const httpClientSpyObj = jasmine.createSpyObj('HttpClient', ['request', 'get', 'post']);
     const loggerSpy = jasmine.createSpyObj('LoggerService', ['debug', 'warn', 'error', 'info']);
 
     TestBed.configureTestingModule({
@@ -30,7 +30,7 @@ describe('FileOperationService', () => {
     httpServiceSpy = TestBed.inject(HttpService) as jasmine.SpyObj<HttpService>;
     httpClientSpy = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
     loggerServiceSpy = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
-    
+
     // Set up default return value for getFullUrl
     httpServiceSpy.getFullUrl.and.returnValue('http://localhost:3000/files/upload');
   });
@@ -42,15 +42,21 @@ describe('FileOperationService', () => {
   describe('renameItem', () => {
     it('should rename item successfully', (done) => {
       const mockResponse: OperationResponse = { success: true, message: 'Item renamed successfully' };
-      httpServiceSpy.post.and.returnValue(of(mockResponse));
+      httpServiceSpy.getFullUrl.and.returnValue('http://localhost:3000/files/rename');
+      httpClientSpy.post.and.returnValue(of(mockResponse));
 
       service.renameItem('/test/file.txt', 'newname.txt').subscribe({
         next: (response) => {
           expect(response).toEqual(mockResponse);
-          expect(httpServiceSpy.post).toHaveBeenCalledWith('/files/rename', {
-            oldPath: '/test/file.txt',
-            newName: 'newname.txt'
-          });
+
+          expect(httpClientSpy.post).toHaveBeenCalled();
+          const args = (httpClientSpy.post as jasmine.Spy).calls.mostRecent().args;
+          expect(args[0]).toBe('http://localhost:3000/files/rename');
+          expect(args[1]).toBeNull();
+          const options = args[2];
+          expect(options.params.get('path')).toBe('/test/file.txt');
+          expect(options.params.get('newName')).toBe('newname.txt');
+
           expect(loggerServiceSpy.debug).toHaveBeenCalled();
           done();
         }
@@ -59,7 +65,8 @@ describe('FileOperationService', () => {
 
     it('should handle rename errors with user-friendly messages', (done) => {
       const error = new Error('permission denied');
-      httpServiceSpy.post.and.returnValue(throwError(() => error));
+      httpServiceSpy.getFullUrl.and.returnValue('http://localhost:3000/files/rename');
+      httpClientSpy.post.and.returnValue(throwError(() => error));
 
       service.renameItem('/test/file.txt', 'newname.txt').subscribe({
         error: (err) => {
@@ -151,14 +158,14 @@ describe('FileOperationService', () => {
   describe('uploadFile', () => {
     it('should upload file with progress tracking', (done) => {
       const mockFile = new File(['content'], 'test.txt', { type: 'text/plain' });
-      
+
       // Mock HTTP events for upload progress
       const progressEvent = {
         type: HttpEventType.UploadProgress,
         loaded: 50,
         total: 100
       };
-      
+
       const responseEvent = {
         type: HttpEventType.Response,
         body: { success: true }
@@ -170,7 +177,7 @@ describe('FileOperationService', () => {
       service.uploadFile(mockFile, '/target').subscribe({
         next: (progress) => {
           progressCount++;
-          
+
           if (progressCount === 1) {
             // Initial pending state
             expect(progress.type).toBe('upload');
@@ -195,7 +202,7 @@ describe('FileOperationService', () => {
     it('should handle upload errors', (done) => {
       const mockFile = new File(['content'], 'test.txt', { type: 'text/plain' });
       const error = { status: 413, message: 'File too large' };
-      
+
       httpClientSpy.request.and.returnValue(throwError(() => error));
 
       service.uploadFile(mockFile, '/target').subscribe({
@@ -210,7 +217,7 @@ describe('FileOperationService', () => {
 
     it('should handle upload cancellation', (done) => {
       const mockFile = new File(['content'], 'test.txt', { type: 'text/plain' });
-      
+
       // Mock a long-running upload
       httpClientSpy.request.and.returnValue(of({
         type: HttpEventType.UploadProgress,
@@ -250,7 +257,7 @@ describe('FileOperationService', () => {
           expect(progresses.length).toBe(2);
           expect(progresses[0].fileName).toBe('test1.txt');
           expect(progresses[1].fileName).toBe('test2.txt');
-          
+
           // Check if all uploads are completed
           const allCompleted = progresses.every(p => p.status === 'completed');
           if (allCompleted) {
@@ -272,14 +279,14 @@ describe('FileOperationService', () => {
       // Mock URL.createObjectURL and related DOM methods
       spyOn(window.URL, 'createObjectURL').and.returnValue('blob:mock-url');
       spyOn(window.URL, 'revokeObjectURL');
-      
+
       const mockAnchor = {
         href: '',
         download: '',
         style: { display: '' },
         click: jasmine.createSpy('click')
       } as any;
-      
+
       spyOn(document, 'createElement').and.returnValue(mockAnchor);
       spyOn(document.body, 'appendChild');
       spyOn(document.body, 'removeChild');
@@ -299,14 +306,14 @@ describe('FileOperationService', () => {
   describe('cancelOperation', () => {
     it('should cancel operation and update status', (done) => {
       const mockFile = new File(['content'], 'test.txt', { type: 'text/plain' });
-      
+
       // Mock a pending upload request
       httpClientSpy.request.and.returnValue(of({
         type: HttpEventType.UploadProgress,
         loaded: 10,
         total: 100
       }));
-      
+
       service.uploadFile(mockFile, '/target').subscribe({
         next: (progress) => {
           if (progress.status === 'cancelled') {
@@ -324,13 +331,13 @@ describe('FileOperationService', () => {
   describe('getOperationProgress', () => {
     it('should return progress for existing operation', (done) => {
       const mockFile = new File(['content'], 'test.txt', { type: 'text/plain' });
-      
+
       // Mock upload request
       httpClientSpy.request.and.returnValue(of({
         type: HttpEventType.Response,
         body: { success: true }
       } as HttpResponse<any>));
-      
+
       service.uploadFile(mockFile, '/target').subscribe({
         next: (progress) => {
           if (progress.status === 'pending') {
