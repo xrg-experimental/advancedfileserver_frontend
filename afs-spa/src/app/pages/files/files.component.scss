@@ -69,6 +69,12 @@
   margin-bottom: 16px;
 }
 
+// Global styles for error snackbar
+:host ::ng-deep .error-snackbar {
+  background-color: #f44336;
+  color: white;
+}
+
 .file-list {
   flex: 1;
   overflow-y: auto;

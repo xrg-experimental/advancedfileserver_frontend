@@ -1,15 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { FilesComponent } from './files.component';
 import { FileService } from '../../core/services/file.service';
+import { FileOperationService } from '../../core/services/file-operation.service';
 import { FileNode } from '../../core/models/file.model';
 
 describe('FilesComponent', () => {
   let component: FilesComponent;
   let fixture: ComponentFixture<FilesComponent>;
   let mockFileService: jasmine.SpyObj<FileService>;
+  let mockFileOperationService: jasmine.SpyObj<FileOperationService>;
+  let mockDialog: jasmine.SpyObj<MatDialog>;
+  let mockSnackBar: jasmine.SpyObj<MatSnackBar>;
 
   const mockFiles: FileNode[] = [
     {
@@ -28,12 +34,20 @@ describe('FilesComponent', () => {
   ];
 
   beforeEach(async () => {
-    const spy = jasmine.createSpyObj('FileService', ['getFiles']);
+    const fileServiceSpy = jasmine.createSpyObj('FileService', ['getFiles']);
+    const fileOperationServiceSpy = jasmine.createSpyObj('FileOperationService', [
+      'renameItem', 'moveItem', 'deleteItem', 'createDirectory'
+    ]);
+    const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    const snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
 
     await TestBed.configureTestingModule({
       imports: [FilesComponent, NoopAnimationsModule],
       providers: [
-        { provide: FileService, useValue: spy }
+        { provide: FileService, useValue: fileServiceSpy },
+        { provide: FileOperationService, useValue: fileOperationServiceSpy },
+        { provide: MatDialog, useValue: dialogSpy },
+        { provide: MatSnackBar, useValue: snackBarSpy }
       ]
     })
     .compileComponents();
@@ -41,6 +55,9 @@ describe('FilesComponent', () => {
     fixture = TestBed.createComponent(FilesComponent);
     component = fixture.componentInstance;
     mockFileService = TestBed.inject(FileService) as jasmine.SpyObj<FileService>;
+    mockFileOperationService = TestBed.inject(FileOperationService) as jasmine.SpyObj<FileOperationService>;
+    mockDialog = TestBed.inject(MatDialog) as jasmine.SpyObj<MatDialog>;
+    mockSnackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
   });
 
   it('should create', () => {
@@ -149,5 +166,50 @@ describe('FilesComponent', () => {
     component.navigateToPath('/other-path');
     
     expect(component.selectedItem).toBeNull();
+  });
+
+  it('should open rename dialog when rename action is triggered', () => {
+    mockFileService.getFiles.and.returnValue(of(mockFiles));
+    fixture.detectChanges();
+    
+    const file = component.fileList[0];
+    component.selectItem(file);
+    
+    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    mockDialogRef.afterClosed.and.returnValue(of(undefined));
+    mockDialog.open.and.returnValue(mockDialogRef);
+    
+    component.onRenameItem();
+    
+    expect(mockDialog.open).toHaveBeenCalled();
+  });
+
+  it('should open delete confirmation dialog when delete action is triggered', () => {
+    mockFileService.getFiles.and.returnValue(of(mockFiles));
+    fixture.detectChanges();
+    
+    const file = component.fileList[0];
+    component.selectItem(file);
+    
+    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    mockDialogRef.afterClosed.and.returnValue(of(false));
+    mockDialog.open.and.returnValue(mockDialogRef);
+    
+    component.onDeleteItem();
+    
+    expect(mockDialog.open).toHaveBeenCalled();
+  });
+
+  it('should open create directory dialog when create directory action is triggered', () => {
+    mockFileService.getFiles.and.returnValue(of(mockFiles));
+    fixture.detectChanges();
+    
+    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    mockDialogRef.afterClosed.and.returnValue(of(undefined));
+    mockDialog.open.and.returnValue(mockDialogRef);
+    
+    component.onCreateDirectory();
+    
+    expect(mockDialog.open).toHaveBeenCalled();
   });
 });
