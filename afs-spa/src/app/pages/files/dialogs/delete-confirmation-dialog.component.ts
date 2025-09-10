@@ -43,7 +43,7 @@ export interface DeleteConfirmationDialogData {
         mat-raised-button
         color="warn"
         (click)="onConfirm()"
-        aria-label="Confirm delete">
+        [attr.aria-label]="'Delete ' + data.itemType + ' ' + data.itemName">
         <mat-icon>delete</mat-icon>
         Delete
       </button>
