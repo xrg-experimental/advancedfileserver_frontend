@@ -410,13 +410,6 @@ jobs:
                 issue_url = result.stdout.strip()
                 print(f"Created issue for task {task['number']}: {task['title']}")
 
-                # If task is completed, close the issue
-                if task['completed']:
-                    issue_number = issue_url.split('/')[-1]
-                    close_cmd = ['gh', 'issue', 'close', issue_number, '--reason', 'completed']
-                    subprocess.run(close_cmd, check=True)
-                    print(f"Closed completed task {task['number']}")
-
                 return True
             except subprocess.CalledProcessError as e:
                 print(f"Failed to create issue for task {task['number']}: {e}")
