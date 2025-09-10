@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
-import { catchError, retry, timeout, finalize } from 'rxjs/operators';
-import { HttpErrorResponse } from '@angular/common/http';
+import { catchError, retry, timeout, finalize, takeUntil, map } from 'rxjs/operators';
+import { HttpEventType, HttpRequest, HttpClient } from '@angular/common/http';
 import {
   OperationProgress,
   RenameRequest,
@@ -22,6 +22,7 @@ export class FileOperationService {
 
   constructor(
     private http: HttpService,
+    private httpClient: HttpClient,
     private logger: LoggerService
   ) {}
 
@@ -111,7 +112,51 @@ export class FileOperationService {
   }
 
   /**
-   * Upload a file with progress tracking (method signature for future implementation)
+   * Upload multiple files with individual progress tracking
+   */
+  uploadFiles(files: FileList | File[], targetPath: string): Observable<OperationProgress[]> {
+    const fileArray = Array.from(files);
+    const uploadObservables = fileArray.map(file => this.uploadFile(file, targetPath));
+
+    this.logger.debug('FileOperationService: Starting multiple file upload', {
+      fileCount: fileArray.length,
+      targetPath,
+      fileNames: fileArray.map(f => f.name)
+    });
+
+    // Return an observable that emits the current state of all uploads
+    return new Observable<OperationProgress[]>(subscriber => {
+      const progressStates = new Map<string, OperationProgress>();
+      let completedCount = 0;
+
+      uploadObservables.forEach((upload$, index) => {
+        upload$.subscribe({
+          next: (progress) => {
+            progressStates.set(progress.id, progress);
+            subscriber.next(Array.from(progressStates.values()));
+
+            if (progress.status === 'completed' || progress.status === 'error' || progress.status === 'cancelled') {
+              completedCount++;
+              if (completedCount === fileArray.length) {
+                subscriber.complete();
+              }
+            }
+          },
+          error: (error) => {
+            // Individual file errors are handled in the progress tracking
+            // Don't fail the entire batch for one file
+            this.logger.warn('FileOperationService: Individual file upload failed in batch', {
+              fileName: fileArray[index]?.name,
+              error: error?.message
+            });
+          }
+        });
+      });
+    });
+  }
+
+  /**
+   * Upload a file with progress tracking
    */
   uploadFile(file: File, targetPath: string): Observable<OperationProgress> {
     const operationId = this.generateOperationId();
@@ -120,21 +165,111 @@ export class FileOperationService {
       type: 'upload',
       fileName: file.name,
       progress: 0,
-      status: 'pending'
+      status: 'pending',
+      totalBytes: file.size,
+      bytesTransferred: 0
     });
 
     this.operationsInProgress.set(operationId, progressSubject);
-    this.operationCancellations.set(operationId, new BehaviorSubject<boolean>(false));
+    const cancellationSubject = new BehaviorSubject<boolean>(false);
+    this.operationCancellations.set(operationId, cancellationSubject);
 
-    // TODO: Implement actual upload logic in future task
-    // For now, return the progress observable that will be implemented later
-    this.logger.debug('FileOperationService: Upload method called (implementation pending)', {
+    this.logger.debug('FileOperationService: Starting file upload', {
       fileName: file.name,
       targetPath,
-      operationId
+      operationId,
+      fileSize: file.size
     });
 
-    // Simulate the pending state for now
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', targetPath);
+
+    // Create an HTTP request with progress tracking
+    const uploadRequest = new HttpRequest('POST', this.http.getFullUrl('/files/upload'), formData, {
+      reportProgress: true
+    });
+
+    // Start the upload
+    this.httpClient.request(uploadRequest).pipe(
+      takeUntil(cancellationSubject.pipe(
+        map(cancelled => {
+          if (cancelled) {
+            throw new Error('Upload cancelled by user');
+          }
+          return cancelled;
+        })
+      )),
+      catchError(error => {
+        this.logger.error('FileOperationService: Upload failed', {
+          operationId,
+          fileName: file.name,
+          error: error?.message || error
+        });
+
+        const errorMessage = this.getUploadErrorMessage(error);
+        progressSubject.next({
+          ...progressSubject.value,
+          status: 'error',
+          error: errorMessage
+        });
+
+        return throwError(() => new Error(errorMessage));
+      }),
+      finalize(() => {
+        // Clean up after completion, error, or cancellation
+        setTimeout(() => {
+          this.operationsInProgress.delete(operationId);
+          this.operationCancellations.delete(operationId);
+          progressSubject.complete();
+        }, 1000); // Keep progress visible for 1 second after completion
+      })
+    ).subscribe({
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          const estimatedTimeRemaining = this.calculateEstimatedTime(
+            event.loaded,
+            event.total,
+            progressSubject.value.estimatedTimeRemaining
+          );
+
+          progressSubject.next({
+            ...progressSubject.value,
+            progress,
+            status: 'in-progress',
+            bytesTransferred: event.loaded,
+            estimatedTimeRemaining
+          });
+
+          this.logger.debug('FileOperationService: Upload progress', {
+            operationId,
+            progress,
+            bytesTransferred: event.loaded,
+            totalBytes: event.total
+          });
+        } else if (event.type === HttpEventType.Response) {
+          // Upload completed successfully
+          this.logger.info('FileOperationService: Upload completed successfully', {
+            operationId,
+            fileName: file.name
+          });
+
+          progressSubject.next({
+            ...progressSubject.value,
+            progress: 100,
+            status: 'completed',
+            bytesTransferred: file.size
+          });
+        }
+      },
+      error: (_) => {
+        // Error handling is done in the catchError operator above
+        // This is just to ensure the subscription doesn't break
+      }
+    });
+
     return progressSubject.asObservable();
   }
 
@@ -172,21 +307,27 @@ export class FileOperationService {
   cancelOperation(operationId: string): void {
     this.logger.debug('FileOperationService: Cancelling operation', { operationId });
 
+    const progressSubject = this.operationsInProgress.get(operationId);
+    if (!progressSubject) {
+      return; // Operation doesn't exist
+    }
+
+    const currentProgress = progressSubject.value;
+    // Only cancel if the operation is still active
+    if (currentProgress.status !== 'pending' && currentProgress.status !== 'in-progress') {
+      return;
+    }
+
     const cancellationSubject = this.operationCancellations.get(operationId);
     if (cancellationSubject) {
       cancellationSubject.next(true);
     }
 
-    const progressSubject = this.operationsInProgress.get(operationId);
-    if (progressSubject) {
-      const currentProgress = progressSubject.value;
-      progressSubject.next({
-        ...currentProgress,
-        status: 'cancelled'
-      });
-      progressSubject.complete();
-      this.operationsInProgress.delete(operationId);
-    }
+    progressSubject.next({
+      ...currentProgress,
+      status: 'cancelled'
+    });
+    progressSubject.complete();
 
     this.operationCancellations.delete(operationId);
   }
@@ -259,5 +400,73 @@ export class FileOperationService {
         this.operationCancellations.delete(operationId);
       }
     }
+  }
+
+  /**
+   * Get user-friendly error message for upload failures
+   */
+  private getUploadErrorMessage(error: any): string {
+    if (error?.message?.includes('cancelled')) {
+      return 'Upload cancelled by user';
+    }
+
+    if (error?.status) {
+      switch (error.status) {
+        case 413:
+          return 'File is too large to upload';
+        case 415:
+          return 'File type is not supported';
+        case 403:
+          return 'Permission denied: Cannot upload to this location';
+        case 507:
+          return 'Insufficient storage space';
+        case 409:
+          return 'A file with this name already exists';
+        default:
+          return error?.error?.message || 'Upload failed due to server error';
+      }
+    }
+
+    if (error?.message?.includes('network')) {
+      return 'Upload failed due to network error';
+    }
+
+    return error?.message || 'Upload failed due to unknown error';
+  }
+
+  /**
+   * Calculate estimated time remaining for upload
+   */
+  private calculateEstimatedTime(
+    bytesTransferred: number,
+    totalBytes: number,
+    previousEstimate?: number
+  ): number {
+    if (bytesTransferred === 0) {
+      return 0;
+    }
+
+    const progress = bytesTransferred / totalBytes;
+    if (progress >= 1) {
+      return 0;
+    }
+
+    // Simple estimation based on current progress
+    // In a real implementation, you might want to track transfer rate over time
+    const remainingBytes = totalBytes - bytesTransferred;
+    const transferRate = bytesTransferred / (Date.now() / 1000); // bytes per second (rough estimate)
+
+    if (transferRate === 0) {
+      return previousEstimate || 0;
+    }
+
+    const estimatedSeconds = remainingBytes / transferRate;
+
+    // Smooth the estimate with the previous value to avoid jumpy numbers
+    if (previousEstimate) {
+      return Math.round((estimatedSeconds + previousEstimate) / 2);
+    }
+
+    return Math.round(estimatedSeconds);
   }
 }

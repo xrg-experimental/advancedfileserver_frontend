@@ -59,13 +59,18 @@
   - Integrate operations with FileOperationService
   - _Requirements: 3.3, 3.4, 3.5, 3.6, 5.1, 5.2, 5.3_
 
-- [ ] 6. Create progress tracking system for long operations
+- [x] 6. Create progress tracking system for long operations
   - Create OperationProgress interface and tracking service
   - Implement progress dialog component with cancel capability
   - Add progress state management in FileOperationService
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 7. Implement file upload with progress tracking
+- [x] 7. Implement file upload with progress tracking
+
+
+
+
+
   - Extend FileOperationService with upload method and progress tracking
   - Add file picker dialog integration
   - Implement upload progress monitoring and cancellation
@@ -97,6 +102,17 @@
   - Write tests for FileOperationService API integration and error handling
   - Write tests for FilesComponent navigation and selection logic
   - Write tests for progress tracking and cancellation functionality
+  - Add unit tests for UploadProgressDialogComponent:
+    - Verify initial display and correct rendering of filename/size/state
+    - Verify progress updates are reflected in the UI as OperationProgress changes
+    - Verify Cancel button behavior: emits/calls cancel, disables appropriately during completion/error
+  - Add unit tests for upload cancellation flow in FileOperationService:
+    - Ensure cancellation triggers the cancellation subject, sets status to 'cancelled', and completes the progress stream
+    - Ensure cleanup removes operation from operationsInProgress and operationCancellations maps
+    - Ensure any subscribed UI observers receive the final cancelled state
+  - Add unit tests for Dialog service methods related to progress/cancel dialogs:
+    - Verify methods to open/close progress dialogs are called with expected params
+    - Verify cancel hooks propagate to FileOperationService.cancelOperation and underlying subscriptions are torn down
   - _Requirements: All requirements coverage through testing_
 
 - [ ] 12. Integration testing and final polish

@@ -21,7 +21,12 @@ import {
   CreateDirectoryDialogResult,
   DirectoryPickerDialogComponent,
   DirectoryPickerDialogData,
-  DirectoryPickerDialogResult
+  DirectoryPickerDialogResult,
+  FilePickerDialogComponent,
+  FilePickerDialogData,
+  FilePickerDialogResult,
+  UploadProgressDialogComponent,
+  UploadProgressDialogData
 } from './dialogs';
 
 @Component({
@@ -221,9 +226,25 @@ export class FilesComponent implements OnInit {
 
   // Action bar event handlers
   onUploadFile(): void {
-    console.log('Upload file action triggered');
-    // TODO: Implement file upload functionality in future task
-    this.showMessage('File upload functionality will be implemented in a future task');
+    const targetPath = this.selectedItem?.type === 'folder' ? this.selectedItem.path : this.currentPath;
+
+    const dialogData: FilePickerDialogData = {
+      multiple: true,
+      accept: '*/*', // Accept all file types - can be configured based on requirements
+      maxFileSize: 100 * 1024 * 1024 // 100MB max file size - can be configured
+    };
+
+    const dialogRef = this.dialog.open(FilePickerDialogComponent, {
+      width: '600px',
+      data: dialogData,
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((result: FilePickerDialogResult | undefined) => {
+      if (result && result.files.length > 0) {
+        this.performUpload(result.files, targetPath);
+      }
+    });
   }
 
   onDownloadFile(): void {
@@ -248,18 +269,10 @@ export class FilesComponent implements OnInit {
       disableClose: false
     });
 
-    dialogRef.afterClosed().subscribe((result: CreateDirectoryDialogResult | undefined) => {
-      if (!result) return;
-      const name = (result.directoryName ?? '').trim();
-      if (!name) {
-        this.showError('Folder name cannot be empty');
-        return;
+    dialogRef.afterClosed().subscribe((result: RenameDialogResult | undefined) => {
+      if (result && this.selectedItem) {
+        this.performRename(this.selectedItem.path, result.newName);
       }
-      if (/[\/\\]/.test(name)) {
-        this.showError('Folder name cannot contain slashes');
-        return;
-      }
-      this.performCreateDirectory(this.currentPath, name);
     });
   }
 
@@ -325,7 +338,7 @@ export class FilesComponent implements OnInit {
   }
 
   /**
-   * Perform rename operation
+   * Perform a rename operation
    */
   private performRename(oldPath: string, newName: string): void {
     this.fileOperationService.renameItem(oldPath, newName).subscribe({
@@ -345,7 +358,7 @@ export class FilesComponent implements OnInit {
   }
 
   /**
-   * Perform move operation
+   * Perform a move operation
    */
   private performMove(sourcePath: string, targetPath: string): void {
     this.fileOperationService.moveItem(sourcePath, targetPath).subscribe({
@@ -404,7 +417,68 @@ export class FilesComponent implements OnInit {
   }
 
   /**
-   * Show success message
+   * Perform file upload operation with progress tracking
+   */
+  private performUpload(files: FileList, targetPath: string): void {
+    // Start the upload and get progress observable
+    const uploadProgress$ = this.fileOperationService.uploadFiles(files, targetPath);
+
+    // Show progress dialog
+    const progressDialogData: UploadProgressDialogData = {
+      uploadProgress$,
+      onCancel: (operationId: string) => {
+        this.fileOperationService.cancelOperation(operationId);
+      }
+    };
+
+    const progressDialogRef = this.dialog.open(UploadProgressDialogComponent, {
+      width: '700px',
+      data: progressDialogData,
+      disableClose: true // Prevent closing during upload
+    });
+
+    // Subscribe to upload progress to handle completion
+    uploadProgress$.subscribe({
+      next: (progresses) => {
+        // Check if all uploads are completed
+        const allCompleted = progresses.every(p =>
+          p.status === 'completed' || p.status === 'error' || p.status === 'cancelled'
+        );
+
+        if (allCompleted) {
+          // Allow the dialog to be closed
+          progressDialogRef.disableClose = false;
+
+          // Show a summary message
+          const completedCount = progresses.filter(p => p.status === 'completed').length;
+          const errorCount = progresses.filter(p => p.status === 'error').length;
+          const cancelledCount = progresses.filter(p => p.status === 'cancelled').length;
+
+          if (completedCount > 0) {
+            this.showMessage(`Successfully uploaded ${completedCount} file${completedCount !== 1 ? 's' : ''}`);
+          }
+
+          if (errorCount > 0) {
+            this.showError(`${errorCount} file${errorCount !== 1 ? 's' : ''} failed to upload`);
+          }
+
+          if (cancelledCount > 0) {
+            this.showMessage(`${cancelledCount} upload${cancelledCount !== 1 ? 's' : ''} cancelled`);
+          }
+
+          // Refresh the directory to show uploaded files
+          this.loadCurrentDirectory();
+        }
+      },
+      error: (error) => {
+        this.showError(`Upload failed: ${error.message || 'Unknown error'}`);
+        progressDialogRef.disableClose = false;
+      }
+    });
+  }
+
+  /**
+   * Show a success message
    */
   private showMessage(message: string): void {
     this.snackBar.open(message, 'Close', {
