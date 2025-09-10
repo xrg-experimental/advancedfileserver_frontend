@@ -69,6 +69,19 @@
   margin-bottom: 16px;
 }
 
+/* Error snackbar (scoped via class from MatSnackBar config) */
+:host {
+  /* allow theme override via CSS vars */
+  --afs-error-bg: var(--mat-sys-error, #b00020);
+  --afs-error-fg: var(--mat-sys-on-error, #ffffff);
+}
+
+/* Prefer moving this to a global stylesheet or snack component styles to avoid ::ng-deep */
+:host ::ng-deep .error-snackbar {
+  background-color: var(--afs-error-bg);
+  color: var(--afs-error-fg);
+}
+
 .file-list {
   flex: 1;
   overflow-y: auto;

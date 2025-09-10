@@ -46,7 +46,12 @@
   - Create action configuration system for different contexts
   - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 5. Implement quick file operations
+- [x] 5. Implement quick file operations
+
+
+
+
+
   - Add rename functionality with inline dialog
   - Add move functionality with directory picker dialog
   - Add delete functionality with confirmation dialog

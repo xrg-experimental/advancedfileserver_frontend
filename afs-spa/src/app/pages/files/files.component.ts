@@ -4,10 +4,25 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FileService } from '../../core/services/file.service';
+import { FileOperationService } from '../../core/services/file-operation.service';
 import { FileNode, FilePermissions } from '../../core/models/file.model';
 import { BreadcrumbItem } from '../../shared';
 import { FileActionBarComponent } from './file-action-bar';
+import {
+  RenameDialogComponent,
+  RenameDialogData,
+  RenameDialogResult,
+  DeleteConfirmationDialogComponent,
+  DeleteConfirmationDialogData,
+  CreateDirectoryDialogComponent,
+  CreateDirectoryDialogResult,
+  DirectoryPickerDialogComponent,
+  DirectoryPickerDialogData,
+  DirectoryPickerDialogResult
+} from './dialogs';
 
 @Component({
   selector: 'app-files',
@@ -18,6 +33,8 @@ import { FileActionBarComponent } from './file-action-bar';
     MatProgressSpinnerModule,
     MatButtonModule,
     MatChipsModule,
+    MatDialogModule,
+    MatSnackBarModule,
     FileActionBarComponent
   ],
   templateUrl: './files.component.html',
@@ -44,7 +61,13 @@ export class FilesComponent implements OnInit {
     canUpload: true
   };
 
-  constructor(private fileService: FileService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private fileService: FileService,
+    private fileOperationService: FileOperationService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   trackByPath = (_: number, item: { path: string }) => item.path;
 
@@ -196,34 +219,210 @@ export class FilesComponent implements OnInit {
     return path.substring(0, lastSlashIndex);
   }
 
-  // Action bar event handlers (placeholder implementations)
+  // Action bar event handlers
   onUploadFile(): void {
     console.log('Upload file action triggered');
-    // TODO: Implement file upload functionality
+    // TODO: Implement file upload functionality in future task
+    this.showMessage('File upload functionality will be implemented in a future task');
   }
 
   onDownloadFile(): void {
     console.log('Download file action triggered for:', this.selectedItem?.name);
-    // TODO: Implement file download functionality
+    // TODO: Implement file download functionality in future task
+    this.showMessage('File download functionality will be implemented in a future task');
   }
 
   onRenameItem(): void {
-    console.log('Rename item action triggered for:', this.selectedItem?.name);
-    // TODO: Implement rename functionality
+    if (!this.selectedItem) {
+      return;
+    }
+
+    const dialogData: RenameDialogData = {
+      currentName: this.selectedItem.name,
+      itemType: this.selectedItem.type
+    };
+
+    const dialogRef = this.dialog.open(RenameDialogComponent, {
+      width: '400px',
+      data: dialogData,
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((result: CreateDirectoryDialogResult | undefined) => {
+      if (!result) return;
+      const name = (result.directoryName ?? '').trim();
+      if (!name) {
+        this.showError('Folder name cannot be empty');
+        return;
+      }
+      if (/[\/\\]/.test(name)) {
+        this.showError('Folder name cannot contain slashes');
+        return;
+      }
+      this.performCreateDirectory(this.currentPath, name);
+    });
   }
 
   onMoveItem(): void {
-    console.log('Move item action triggered for:', this.selectedItem?.name);
-    // TODO: Implement move functionality
+    if (!this.selectedItem) {
+      return;
+    }
+
+    const dialogData: DirectoryPickerDialogData = {
+      currentPath: this.currentPath,
+      excludePath: this.selectedItem.path // Exclude the item being moved
+    };
+
+    const dialogRef = this.dialog.open(DirectoryPickerDialogComponent, {
+      width: '600px',
+      height: '500px',
+      data: dialogData,
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((result: DirectoryPickerDialogResult | undefined) => {
+      if (result && this.selectedItem) {
+        const targetPath = result.selectedPath + '/' + this.selectedItem.name;
+        this.performMove(this.selectedItem.path, targetPath);
+      }
+    });
   }
 
   onDeleteItem(): void {
-    console.log('Delete item action triggered for:', this.selectedItem?.name);
-    // TODO: Implement delete functionality
+    if (!this.selectedItem) {
+      return;
+    }
+
+    const dialogData: DeleteConfirmationDialogData = {
+      itemName: this.selectedItem.name,
+      itemType: this.selectedItem.type
+    };
+
+    const dialogRef = this.dialog.open(DeleteConfirmationDialogComponent, {
+      width: '450px',
+      data: dialogData,
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean | undefined) => {
+      if (confirmed && this.selectedItem) {
+        this.performDelete(this.selectedItem.path);
+      }
+    });
   }
 
   onCreateDirectory(): void {
-    console.log('Create directory action triggered');
-    // TODO: Implement create directory functionality
+    const dialogRef = this.dialog.open(CreateDirectoryDialogComponent, {
+      width: '400px',
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((result: CreateDirectoryDialogResult | undefined) => {
+      if (result) {
+        this.performCreateDirectory(this.currentPath, result.directoryName);
+      }
+    });
+  }
+
+  /**
+   * Perform rename operation
+   */
+  private performRename(oldPath: string, newName: string): void {
+    this.fileOperationService.renameItem(oldPath, newName).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.showMessage(`Successfully renamed to "${newName}"`);
+          this.selectedItem = null; // Clear selection
+          this.loadCurrentDirectory(); // Refresh the directory
+        } else {
+          this.showError(response.error || 'Failed to rename item');
+        }
+      },
+      error: (error) => {
+        this.showError(error.message || 'Failed to rename item');
+      }
+    });
+  }
+
+  /**
+   * Perform move operation
+   */
+  private performMove(sourcePath: string, targetPath: string): void {
+    this.fileOperationService.moveItem(sourcePath, targetPath).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.showMessage('Item moved successfully');
+          this.selectedItem = null; // Clear selection
+          this.loadCurrentDirectory(); // Refresh the directory
+        } else {
+          this.showError(response.error || 'Failed to move item');
+        }
+      },
+      error: (error) => {
+        this.showError(error.message || 'Failed to move item');
+      }
+    });
+  }
+
+  /**
+   * Perform delete operation
+   */
+  private performDelete(path: string): void {
+    this.fileOperationService.deleteItem(path).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.showMessage('Item deleted successfully');
+          this.selectedItem = null; // Clear selection
+          this.loadCurrentDirectory(); // Refresh the directory
+        } else {
+          this.showError(response.error || 'Failed to delete item');
+        }
+      },
+      error: (error) => {
+        this.showError(error.message || 'Failed to delete item');
+      }
+    });
+  }
+
+  /**
+   * Perform create directory operation
+   */
+  private performCreateDirectory(path: string, name: string): void {
+    this.fileOperationService.createDirectory(path, name).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.showMessage(`Folder "${name}" created successfully`);
+          this.loadCurrentDirectory(); // Refresh the directory
+        } else {
+          this.showError(response.error || 'Failed to create folder');
+        }
+      },
+      error: (error) => {
+        this.showError(error.message || 'Failed to create folder');
+      }
+    });
+  }
+
+  /**
+   * Show success message
+   */
+  private showMessage(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      horizontalPosition: 'end',
+      verticalPosition: 'bottom'
+    });
+  }
+
+  /**
+   * Show error message
+   */
+  private showError(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      horizontalPosition: 'end',
+      verticalPosition: 'bottom',
+      panelClass: ['error-snackbar']
+    });
   }
 }

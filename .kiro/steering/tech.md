@@ -33,18 +33,16 @@
 ```bash
 # Start development server
 cd afs-spa
-npm start
-# or
 npx ng serve
 
 # Build for production
-npm run build
+npx ng build
 
 # Run tests
-npm test
+npx ng test
 
 # Build with watch mode
-npm run watch
+npx ng watch
 ```
 
 ### Styling
