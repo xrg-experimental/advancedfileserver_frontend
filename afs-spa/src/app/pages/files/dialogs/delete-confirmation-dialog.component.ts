@@ -1,4 +1,5 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,31 +17,33 @@ export interface DeleteConfirmationDialogData {
     CommonModule,
     MatDialogModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    A11yModule
   ],
   template: `
     <h2 mat-dialog-title>
       <mat-icon color="warn">warning</mat-icon>
       Confirm Delete
     </h2>
-    
+
     <mat-dialog-content>
       <p>Are you sure you want to delete the {{ data.itemType }} <strong>"{{ data.itemName }}"</strong>?</p>
-      
+
       <div class="warning-message" *ngIf="data.itemType === 'folder'">
         <mat-icon color="warn">info</mat-icon>
         <span>This will permanently delete the folder and all its contents.</span>
       </div>
-      
+
       <p class="permanent-warning">This action cannot be undone.</p>
     </mat-dialog-content>
-    
+
     <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
-      <button 
-        mat-raised-button 
-        color="warn" 
-        (click)="onConfirm()">
+      <button mat-button (click)="onCancel()" cdkFocusInitial>Cancel</button>
+      <button
+        mat-raised-button
+        color="warn"
+        (click)="onConfirm()"
+        aria-label="Confirm delete">
         <mat-icon>delete</mat-icon>
         Delete
       </button>
@@ -52,7 +55,7 @@ export interface DeleteConfirmationDialogData {
       align-items: center;
       gap: 8px;
     }
-    
+
     .warning-message {
       display: flex;
       align-items: center;
@@ -64,18 +67,19 @@ export interface DeleteConfirmationDialogData {
       margin: 16px 0;
       color: #856404;
     }
-    
+
     .permanent-warning {
       font-weight: 500;
       color: #d32f2f;
       margin-top: 16px;
       margin-bottom: 0;
     }
-    
+
     mat-dialog-content {
       min-width: 350px;
     }
-  `]
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeleteConfirmationDialogComponent {
   constructor(
