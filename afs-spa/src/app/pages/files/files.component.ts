@@ -4,8 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FileService } from '../../core/services/file.service';
 import { FileOperationService } from '../../core/services/file-operation.service';
 import { FileNode, FilePermissions } from '../../core/models/file.model';
@@ -33,6 +33,8 @@ import {
     MatProgressSpinnerModule,
     MatButtonModule,
     MatChipsModule,
+    MatDialogModule,
+    MatSnackBarModule,
     FileActionBarComponent
   ],
   templateUrl: './files.component.html',
