@@ -543,6 +543,8 @@ export class FileOperationService {
 
     if (error?.status) {
       switch (error.status) {
+        case 401:
+          return 'You are not signed in or your session is expired';
         case 404:
           return 'File not found or has been moved';
         case 403:
@@ -584,8 +586,8 @@ export class FileOperationService {
       anchor.click();
       document.body.removeChild(anchor);
 
-      // Clean up the temporary URL
-      window.URL.revokeObjectURL(url);
+      // Clean up the temporary URL after the click
+      setTimeout(() => window.URL.revokeObjectURL(url), 0);
 
       this.logger.debug('FileOperationService: Browser download triggered', { fileName });
     } catch (error) {
