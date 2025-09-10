@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
+import {Component, Inject, OnInit, OnDestroy, ChangeDetectorRef} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -50,29 +50,29 @@ export interface UploadProgressDialogData {
               <mat-icon matListItemIcon [class]="getStatusIconClass(progress.status)">
                 {{ getStatusIcon(progress.status) }}
               </mat-icon>
-              
+
               <div matListItemTitle>{{ progress.fileName }}</div>
-              
+
               <div matListItemLine class="progress-details">
                 <div class="progress-info">
                   <span class="status-text">{{ getStatusText(progress) }}</span>
                   <span class="size-info" *ngIf="progress.totalBytes">
-                    {{ formatFileSize(progress.bytesTransferred || 0) }} / 
+                    {{ formatFileSize(progress.bytesTransferred || 0) }} /
                     {{ formatFileSize(progress.totalBytes) }}
                   </span>
                 </div>
-                
+
                 <mat-progress-bar
                   *ngIf="progress.status === 'in-progress' || progress.status === 'pending'"
                   mode="determinate"
                   [value]="progress.progress"
                   [color]="getProgressBarColor(progress.status)">
                 </mat-progress-bar>
-                
+
                 <div class="time-estimate" *ngIf="progress.estimatedTimeRemaining && progress.status === 'in-progress'">
                   Estimated time remaining: {{ formatTime(progress.estimatedTimeRemaining) }}
                 </div>
-                
+
                 <div class="error-message" *ngIf="progress.status === 'error' && progress.error">
                   {{ progress.error }}
                 </div>
@@ -219,12 +219,17 @@ export class UploadProgressDialogComponent implements OnInit, OnDestroy {
 
   constructor(
     public dialogRef: MatDialogRef<UploadProgressDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: UploadProgressDialogData
+    private cdr: ChangeDetectorRef,
+  @Inject(MAT_DIALOG_DATA) public data: UploadProgressDialogData
   ) {}
 
   ngOnInit(): void {
+    if (!this.data.uploadProgress$) {
+      return;
+    }
     this.subscription = this.data.uploadProgress$.subscribe(progresses => {
       this.uploadProgresses = progresses;
+      this.cdr.markForCheck();
     });
   }
 
@@ -233,20 +238,20 @@ export class UploadProgressDialogComponent implements OnInit, OnDestroy {
   }
 
   get completedCount(): number {
-    return this.uploadProgresses.filter(p => 
+    return this.uploadProgresses.filter(p =>
       p.status === 'completed' || p.status === 'error' || p.status === 'cancelled'
     ).length;
   }
 
   get overallProgress(): number {
     if (this.uploadProgresses.length === 0) return 0;
-    
+
     const totalProgress = this.uploadProgresses.reduce((sum, progress) => sum + progress.progress, 0);
     return Math.round(totalProgress / this.uploadProgresses.length);
   }
 
   get hasActiveUploads(): boolean {
-    return this.uploadProgresses.some(p => 
+    return this.uploadProgresses.some(p =>
       p.status === 'pending' || p.status === 'in-progress'
     );
   }
