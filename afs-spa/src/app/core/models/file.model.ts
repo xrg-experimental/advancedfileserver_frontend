@@ -61,7 +61,7 @@ export interface OperationProgress {
 
 // API operation request/response interfaces
 export interface RenameRequest {
-  oldPath: string;
+  path: string;
   newName: string;
 }
 

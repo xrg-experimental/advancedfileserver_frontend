@@ -31,7 +31,7 @@ export class FileOperationService {
    * Rename a file or directory
    */
   renameItem(oldPath: string, newName: string): Observable<OperationResponse> {
-    const request: RenameRequest = { oldPath, newName };
+    const request: RenameRequest = { path: oldPath, newName };
 
     this.logger.debug('FileOperationService: Renaming item', { oldPath, newName });
 
