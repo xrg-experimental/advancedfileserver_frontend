@@ -438,38 +438,7 @@ export class FilesComponent implements OnInit {
     });
 
     // Subscribe to upload progress to handle completion
-// Make sure you have this import at the top of the file:
-import { Subscription } from 'rxjs';
-
-export class FilesComponent implements OnInit, OnDestroy {
-  // Track the active upload subscription so we can clean it up
-  private uploadSubscription?: Subscription;
-
-  // ... other members ...
-
-  private performUpload(files: FileList, targetPath: string): void {
-    // Start the upload and get progress observable
-    const uploadProgress$ = this.fileOperationService.uploadFiles(files, targetPath);
-
-    // Show progress dialog
-    const progressDialogData: UploadProgressDialogData = {
-      uploadProgress$,
-      onCancel: (operationId: string) => {
-        this.fileOperationService.cancelOperation(operationId);
-      }
-    };
-
-    const progressDialogRef = this.dialog.open(UploadProgressDialogComponent, {
-      width: '700px',
-      data: progressDialogData,
-      disableClose: true // Prevent closing during upload
-    });
-
-    // Clean up any existing subscription before starting a new one
-    this.uploadSubscription?.unsubscribe();
-    
-    // Subscribe to upload progress to handle completion
-    this.uploadSubscription = uploadProgress$.subscribe({
+    uploadProgress$.subscribe({
       next: (progresses) => {
         // Check if all uploads are completed
         const allCompleted = progresses.every(p =>
@@ -482,8 +451,8 @@ export class FilesComponent implements OnInit, OnDestroy {
 
           // Show a summary message
           const completedCount = progresses.filter(p => p.status === 'completed').length;
-          const errorCount      = progresses.filter(p => p.status === 'error').length;
-          const cancelledCount  = progresses.filter(p => p.status === 'cancelled').length;
+          const errorCount = progresses.filter(p => p.status === 'error').length;
+          const cancelledCount = progresses.filter(p => p.status === 'cancelled').length;
 
           if (completedCount > 0) {
             this.showMessage(`Successfully uploaded ${completedCount} file${completedCount !== 1 ? 's' : ''}`);
@@ -506,13 +475,6 @@ export class FilesComponent implements OnInit, OnDestroy {
         progressDialogRef.disableClose = false;
       }
     });
-  }
-
-  ngOnDestroy(): void {
-    // Ensure we always clean up our subscription
-    this.uploadSubscription?.unsubscribe();
-  }
-}
   }
 
   /**
