@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FileNode, FilePermissions, ActionConfig } from '../../../core/models/file.model';
+import { FileNode, FilePermissions } from '../../../core/models/file.model';
+import { ActionConfig } from '../../../shared';
 
 @Component({
   selector: 'app-file-action-bar',
