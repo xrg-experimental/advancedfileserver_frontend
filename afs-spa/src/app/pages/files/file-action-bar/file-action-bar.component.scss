@@ -53,9 +53,9 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background-color: #e3f2fd;
+    background-color: var(--afs-selection-info-bg, #e3f2fd);
     border-radius: 4px;
-    color: #1976d2;
+    color: var(--afs-selection-info-fg, #1976d2);
     font-size: 14px;
 
     .selection-icon {
