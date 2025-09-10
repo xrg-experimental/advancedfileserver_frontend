@@ -1,11 +1,12 @@
-<div class="action-bar">
+<div class="action-bar" role="toolbar" aria-label="File actions">
   <div class="action-buttons">
-    <ng-container *ngFor="let action of actions">
+    <ng-container *ngFor="let action of actions; trackBy: trackById">
       <ng-container *ngIf="action.visible">
         <span [matTooltip]="action.label">
           <button
             mat-raised-button
             class="action-button"
+            type="button"
             [disabled]="!action.enabled"
             [color]="action.id === 'delete' ? 'warn' : (action.id === 'upload' || action.id === 'create-directory' ? 'primary' : null)"
             (click)="onActionClick(action.id)"

@@ -48,6 +48,8 @@ export class FileActionBarComponent implements OnChanges, OnInit {
 
   actions: ActionConfig[] = [];
 
+  public trackById = (_: number, a: ActionConfig) => a.id;
+
   ngOnInit(): void {
     this.updateActionStates();
   }
