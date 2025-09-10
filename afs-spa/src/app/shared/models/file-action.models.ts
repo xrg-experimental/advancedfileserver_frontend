@@ -48,13 +48,31 @@ export interface BreadcrumbItem {
  * Configuration for action buttons in the action bar
  * Defines behavior and visibility rules for each action
  */
+export type ActionId =
+  | 'upload'
+  | 'download'
+  | 'rename'
+  | 'move'
+  | 'delete'
+  | 'create-directory';
+
+export type ActionIcon =
+  | 'upload'
+  | 'download'
+  | 'edit'
+  | 'drive_file_move'
+  | 'delete'
+  | 'create_new_folder';
+
+export type PermissionKey = keyof FilePermissions; // narrows to the literal union of permission keys
+
 export interface ActionConfig {
   /** Unique identifier for the action */
-  readonly id: string; // consider a shared union of allowed ids
+  readonly id: ActionId;
   /** Display label for the action button */
   readonly label: string;
   /** Material icon name for the action button */
-  readonly icon: string; // consider a union of allowed Material icons used
+  readonly icon: ActionIcon;
   /** Whether the action is currently enabled */
   readonly enabled: boolean;
   /** Whether the action should be visible */
@@ -64,5 +82,5 @@ export interface ActionConfig {
   /** File/folder types this action supports */
   readonly supportedTypes: ReadonlyArray<FileNode['type']>;
   /** Permissions required to perform this action */
-  readonly requiredPermissions: ReadonlyArray<keyof FilePermissions>;
+  readonly requiredPermissions: ReadonlyArray<PermissionKey>;
 }

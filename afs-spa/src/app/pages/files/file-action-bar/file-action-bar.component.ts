@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FileNode, FilePermissions } from '../../../core/models/file.model';
-import { ActionConfig } from '../../../shared';
+import { ActionConfig, ActionId } from '../../../shared';
 
 @Component({
   selector: 'app-file-action-bar',
@@ -48,7 +48,7 @@ export class FileActionBarComponent implements OnChanges {
   /**
    * Handle action button clicks
    */
-  onActionClick(actionId: string): void {
+  onActionClick(actionId: ActionId): void {
     switch (actionId) {
       case 'upload':
         this.uploadFile.emit();
