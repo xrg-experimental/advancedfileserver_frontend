@@ -36,13 +36,13 @@
         cursor: not-allowed;
       }
 
-      &:not(.primary-action):not(.danger-action) {
-        background-color: white;
-        color: #333;
-        border: 1px solid #ddd;
-
+      // Only apply neutral styling when no Material color class is present
+      &.mat-mdc-raised-button:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+        background-color: var(--afs-button-neutral-bg, #fff);
+        color: var(--afs-button-neutral-fg, #333);
+        border: 1px solid var(--afs-button-neutral-border, #ddd);
         &:hover:not(:disabled) {
-          background-color: #f5f5f5;
+          background-color: var(--afs-button-neutral-hover-bg, #f5f5f5);
         }
       }
     }
