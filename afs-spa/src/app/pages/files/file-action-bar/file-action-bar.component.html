@@ -1,19 +1,23 @@
 <div class="action-bar">
   <div class="action-buttons">
-    <button
-      *ngFor="let action of actions"
-      mat-raised-button
-      [disabled]="!action.enabled"
-      [matTooltip]="action.label"
-      [class.primary-action]="action.id === 'upload' || action.id === 'create-directory'"
-      [class.danger-action]="action.id === 'delete'"
-      (click)="onActionClick(action.id)"
-      class="action-button">
-      <mat-icon>{{ action.icon }}</mat-icon>
-      <span class="button-label">{{ action.label }}</span>
-    </button>
+    <ng-container *ngFor="let action of actions">
+      <ng-container *ngIf="action.visible">
+        <span [matTooltip]="action.label">
+          <button
+            mat-raised-button
+            class="action-button"
+            [disabled]="!action.enabled"
+            [color]="action.id === 'delete' ? 'warn' : (action.id === 'upload' || action.id === 'create-directory' ? 'primary' : null)"
+            (click)="onActionClick(action.id)"
+            [attr.aria-label]="action.label">
+            <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+            <span class="button-label">{{ action.label }}</span>
+          </button>
+        </span>
+      </ng-container>
+    </ng-container>
   </div>
-  
+
   <div class="selection-info" *ngIf="selectedItem">
     <mat-icon class="selection-icon">{{ selectedItem.type === 'file' ? 'description' : 'folder' }}</mat-icon>
     <span class="selection-text">{{ selectedItem.name }}</span>
