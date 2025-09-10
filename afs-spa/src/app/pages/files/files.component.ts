@@ -5,7 +5,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { FileService } from '../../core/services/file.service';
-import { FileNode, FilePermissions, BreadcrumbItem } from '../../core/models/file.model';
+import { FileNode, FilePermissions } from '../../core/models/file.model';
+import { BreadcrumbItem } from '../../shared';
 import { FileActionBarComponent } from './file-action-bar';
 
 @Component({
