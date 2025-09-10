@@ -19,6 +19,7 @@ import {
 export class FileOperationService {
   private operationsInProgress = new Map<string, BehaviorSubject<OperationProgress>>();
   private operationCancellations = new Map<string, BehaviorSubject<boolean>>();
+  private operationStartTimes = new Map<string, number>();
 
   constructor(
     private http: HttpService,
@@ -173,6 +174,7 @@ export class FileOperationService {
     this.operationsInProgress.set(operationId, progressSubject);
     const cancellationSubject = new BehaviorSubject<boolean>(false);
     this.operationCancellations.set(operationId, cancellationSubject);
+    this.operationStartTimes.set(operationId, Date.now());
 
     this.logger.debug('FileOperationService: Starting file upload', {
       fileName: file.name,
@@ -222,6 +224,7 @@ export class FileOperationService {
         setTimeout(() => {
           this.operationsInProgress.delete(operationId);
           this.operationCancellations.delete(operationId);
+          this.operationStartTimes.delete(operationId);
           progressSubject.complete();
         }, 1000); // Keep progress visible for 1 second after completion
       })
@@ -230,6 +233,7 @@ export class FileOperationService {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           const progress = Math.round((event.loaded / event.total) * 100);
           const estimatedTimeRemaining = this.calculateEstimatedTime(
+            operationId,
             event.loaded,
             event.total,
             progressSubject.value.estimatedTimeRemaining
@@ -290,6 +294,7 @@ export class FileOperationService {
     this.operationsInProgress.set(operationId, progressSubject);
     const cancellationSubject = new BehaviorSubject<boolean>(false);
     this.operationCancellations.set(operationId, cancellationSubject);
+    this.operationStartTimes.set(operationId, Date.now());
 
     this.logger.debug('FileOperationService: Starting file download', {
       filePath,
@@ -336,6 +341,7 @@ export class FileOperationService {
         setTimeout(() => {
           this.operationsInProgress.delete(operationId);
           this.operationCancellations.delete(operationId);
+          this.operationStartTimes.delete(operationId);
           progressSubject.complete();
         }, 1000); // Keep progress visible for 1 second after completion
       })
@@ -344,6 +350,7 @@ export class FileOperationService {
         if (event.type === HttpEventType.DownloadProgress && event.total) {
           const progress = Math.round((event.loaded / event.total) * 100);
           const estimatedTimeRemaining = this.calculateEstimatedTime(
+            operationId,
             event.loaded,
             event.total,
             progressSubject.value.estimatedTimeRemaining
@@ -421,6 +428,7 @@ export class FileOperationService {
     progressSubject.complete();
 
     this.operationCancellations.delete(operationId);
+    this.operationStartTimes.delete(operationId);
   }
 
   /**
@@ -593,11 +601,12 @@ export class FileOperationService {
    * Calculate estimated time remaining for upload
    */
   private calculateEstimatedTime(
+    operationId: string,
     bytesTransferred: number,
     totalBytes: number,
     previousEstimate?: number
   ): number {
-    if (bytesTransferred === 0) {
+    if (bytesTransferred <= 0 || totalBytes <= 0) {
       return 0;
     }
 
@@ -606,22 +615,31 @@ export class FileOperationService {
       return 0;
     }
 
-    // Simple estimation based on current progress
-    // In a real implementation, you might want to track transfer rate over time
-    const remainingBytes = totalBytes - bytesTransferred;
-    const transferRate = bytesTransferred / (Date.now() / 1000); // bytes per second (rough estimate)
+    const startTime = this.operationStartTimes.get(operationId);
+    if (!startTime) {
+      // Initialize if missing and return the previous estimate (or 0) for this tick
+      this.operationStartTimes.set(operationId, Date.now());
+      return previousEstimate ? Math.round(previousEstimate) : 0;
+    }
 
-    if (transferRate === 0) {
+    const elapsedSec = (Date.now() - startTime) / 1000;
+    if (elapsedSec <= 0) {
       return previousEstimate || 0;
     }
 
-    const estimatedSeconds = remainingBytes / transferRate;
-
-    // Smooth the estimate with the previous value to avoid jumpy numbers
-    if (previousEstimate) {
-      return Math.round((estimatedSeconds + previousEstimate) / 2);
+    const rate = bytesTransferred / elapsedSec; // bytes per second
+    if (!isFinite(rate) || rate <= 0) {
+      return previousEstimate || 0;
     }
 
-    return Math.round(estimatedSeconds);
+    const remainingBytes = Math.max(0, totalBytes - bytesTransferred);
+    const etaSec = remainingBytes / rate;
+
+    // Smooth the estimate with the previous value to avoid jumpy numbers
+    const smoothed = previousEstimate != null
+      ? (previousEstimate * 0.7 + etaSec * 0.3)
+      : etaSec;
+
+    return Math.round(smoothed);
   }
 }
