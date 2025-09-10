@@ -20,7 +20,7 @@
       min-width: 120px;
       height: 36px;
       font-size: 14px;
-      
+
       mat-icon {
         font-size: 18px;
         width: 18px;
@@ -29,24 +29,6 @@
 
       .button-label {
         font-weight: 500;
-      }
-
-      &.primary-action {
-        background-color: #e91e63;
-        color: white;
-
-        &:hover:not(:disabled) {
-          background-color: #c2185b;
-        }
-      }
-
-      &.danger-action {
-        background-color: #f44336;
-        color: white;
-
-        &:hover:not(:disabled) {
-          background-color: #d32f2f;
-        }
       }
 
       &:disabled {
@@ -101,7 +83,7 @@
 
     .action-buttons {
       justify-content: center;
-      
+
       .action-button {
         flex: 1;
         min-width: 100px;
@@ -123,7 +105,7 @@
         .button-label {
           display: none;
         }
-        
+
         min-width: 48px;
         justify-content: center;
       }
