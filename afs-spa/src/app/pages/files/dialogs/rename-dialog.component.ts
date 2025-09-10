@@ -28,13 +28,13 @@ export interface RenameDialogResult {
   ],
   template: `
     <h2 mat-dialog-title>Rename {{ data.itemType === 'file' ? 'File' : 'Folder' }}</h2>
-    
+
     <mat-dialog-content>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>{{ data.itemType === 'file' ? 'File' : 'Folder' }} name</mat-label>
-        <input 
-          matInput 
-          [(ngModel)]="newName" 
+        <input
+          matInput
+          [(ngModel)]="newName"
           (keyup.enter)="onConfirm()"
           #nameInput
           maxlength="255"
@@ -44,12 +44,12 @@ export interface RenameDialogResult {
         </mat-error>
       </mat-form-field>
     </mat-dialog-content>
-    
+
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Cancel</button>
-      <button 
-        mat-raised-button 
-        color="primary" 
+      <button
+        mat-raised-button
+        color="primary"
         (click)="onConfirm()"
         [disabled]="!isValidName() || newName.trim() === data.currentName">
         Rename
@@ -60,7 +60,7 @@ export interface RenameDialogResult {
     .full-width {
       width: 100%;
     }
-    
+
     mat-dialog-content {
       min-width: 300px;
       padding-top: 16px;
@@ -101,16 +101,12 @@ export class RenameDialogComponent {
 
     // Check for reserved names (Windows)
     const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-    if (reservedNames.test(trimmed)) {
-      return false;
-    }
-
-    return true;
+    return !reservedNames.test(trimmed);
   }
 
   getValidationError(): string {
     const trimmed = this.newName?.trim();
-    
+
     if (!trimmed) {
       return 'Name cannot be empty';
     }

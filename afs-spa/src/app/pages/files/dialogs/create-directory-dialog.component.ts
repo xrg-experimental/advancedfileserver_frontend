@@ -28,13 +28,13 @@ export interface CreateDirectoryDialogResult {
       <mat-icon>create_new_folder</mat-icon>
       Create New Folder
     </h2>
-    
+
     <mat-dialog-content>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Folder name</mat-label>
-        <input 
-          matInput 
-          [(ngModel)]="directoryName" 
+        <input
+          matInput
+          [(ngModel)]="directoryName"
           (keyup.enter)="onConfirm()"
           #nameInput
           maxlength="255"
@@ -45,12 +45,12 @@ export interface CreateDirectoryDialogResult {
         </mat-error>
       </mat-form-field>
     </mat-dialog-content>
-    
+
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Cancel</button>
-      <button 
-        mat-raised-button 
-        color="primary" 
+      <button
+        mat-raised-button
+        color="primary"
         (click)="onConfirm()"
         [disabled]="!isValidName()">
         <mat-icon>create_new_folder</mat-icon>
@@ -64,11 +64,11 @@ export interface CreateDirectoryDialogResult {
       align-items: center;
       gap: 8px;
     }
-    
+
     .full-width {
       width: 100%;
     }
-    
+
     mat-dialog-content {
       min-width: 300px;
       padding-top: 16px;
@@ -111,16 +111,12 @@ export class CreateDirectoryDialogComponent {
     }
 
     // Check for names that are just dots
-    if (/^\.+$/.test(trimmed)) {
-      return false;
-    }
-
-    return true;
+    return !/^\.+$/.test(trimmed);
   }
 
   getValidationError(): string {
     const trimmed = this.directoryName?.trim();
-    
+
     if (!trimmed) {
       return 'Folder name cannot be empty';
     }

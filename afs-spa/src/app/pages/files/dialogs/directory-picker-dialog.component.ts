@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTreeModule } from '@angular/material/tree';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FileService } from '../../../core/services/file.service';
 import { FileNode } from '../../../core/models/file.model';
@@ -33,11 +32,11 @@ export interface DirectoryPickerDialogResult {
       <mat-icon>drive_file_move</mat-icon>
       Select Destination Folder
     </h2>
-    
+
     <mat-dialog-content>
       <!-- Breadcrumb navigation -->
       <div class="breadcrumb-container" *ngIf="breadcrumbs.length > 0">
-        <button 
+        <button
           *ngFor="let breadcrumb of breadcrumbs; let last = last"
           mat-button
           class="breadcrumb-item"
@@ -69,8 +68,8 @@ export interface DirectoryPickerDialogResult {
       <!-- Directory list -->
       <div class="directory-list" *ngIf="!isLoading && !error">
         <!-- Up navigation -->
-        <button 
-          mat-button 
+        <button
+          mat-button
           class="directory-item up-button"
           *ngIf="canNavigateUp()"
           (click)="navigateUp()">
@@ -79,7 +78,7 @@ export interface DirectoryPickerDialogResult {
         </button>
 
         <!-- Folders -->
-        <button 
+        <button
           *ngFor="let folder of folders"
           mat-button
           class="directory-item"
@@ -99,12 +98,12 @@ export interface DirectoryPickerDialogResult {
         </div>
       </div>
     </mat-dialog-content>
-    
+
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Cancel</button>
-      <button 
-        mat-raised-button 
-        color="primary" 
+      <button
+        mat-raised-button
+        color="primary"
         (click)="onConfirm()"
         [disabled]="!selectedPath || selectedPath === data.currentPath">
         <mat-icon>drive_file_move</mat-icon>
