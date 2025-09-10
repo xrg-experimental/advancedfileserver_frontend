@@ -274,7 +274,7 @@ export class FileOperationService {
   }
 
   /**
-   * Download a file with progress tracking (method signature for future implementation)
+   * Download a file with progress tracking
    */
   downloadFile(filePath: string): Observable<OperationProgress> {
     const operationId = this.generateOperationId();
@@ -288,16 +288,107 @@ export class FileOperationService {
     });
 
     this.operationsInProgress.set(operationId, progressSubject);
-    this.operationCancellations.set(operationId, new BehaviorSubject<boolean>(false));
+    const cancellationSubject = new BehaviorSubject<boolean>(false);
+    this.operationCancellations.set(operationId, cancellationSubject);
 
-    // TODO: Implement actual download logic in future task
-    // For now, return the progress observable that will be implemented later
-    this.logger.debug('FileOperationService: Download method called (implementation pending)', {
+    this.logger.debug('FileOperationService: Starting file download', {
       filePath,
-      operationId
+      operationId,
+      fileName
     });
 
-    // Simulate the pending state for now
+    // Create a download request with progress tracking
+    const downloadUrl = this.http.getFullUrl(`/files/download?path=${encodeURIComponent(filePath)}`);
+
+    // Use HttpClient directly to get progress events
+    this.httpClient.get(downloadUrl, {
+      reportProgress: true,
+      observe: 'events',
+      responseType: 'blob'
+    }).pipe(
+      takeUntil(cancellationSubject.pipe(
+        map(cancelled => {
+          if (cancelled) {
+            throw new Error('Download cancelled by user');
+          }
+          return cancelled;
+        })
+      )),
+      catchError(error => {
+        this.logger.error('FileOperationService: Download failed', {
+          operationId,
+          fileName,
+          filePath,
+          error: error?.message || error
+        });
+
+        const errorMessage = this.getDownloadErrorMessage(error);
+        progressSubject.next({
+          ...progressSubject.value,
+          status: 'error',
+          error: errorMessage
+        });
+
+        return throwError(() => new Error(errorMessage));
+      }),
+      finalize(() => {
+        // Clean up after completion, error, or cancellation
+        setTimeout(() => {
+          this.operationsInProgress.delete(operationId);
+          this.operationCancellations.delete(operationId);
+          progressSubject.complete();
+        }, 1000); // Keep progress visible for 1 second after completion
+      })
+    ).subscribe({
+      next: (event) => {
+        if (event.type === HttpEventType.DownloadProgress && event.total) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          const estimatedTimeRemaining = this.calculateEstimatedTime(
+            event.loaded,
+            event.total,
+            progressSubject.value.estimatedTimeRemaining
+          );
+
+          progressSubject.next({
+            ...progressSubject.value,
+            progress,
+            status: 'in-progress',
+            bytesTransferred: event.loaded,
+            totalBytes: event.total,
+            estimatedTimeRemaining
+          });
+
+          this.logger.debug('FileOperationService: Download progress', {
+            operationId,
+            progress,
+            bytesTransferred: event.loaded,
+            totalBytes: event.total
+          });
+        } else if (event.type === HttpEventType.Response && event.body) {
+          // Download completed successfully, trigger browser download
+          this.logger.info('FileOperationService: Download completed successfully', {
+            operationId,
+            fileName,
+            filePath
+          });
+
+          progressSubject.next({
+            ...progressSubject.value,
+            progress: 100,
+            status: 'completed',
+            bytesTransferred: progressSubject.value.totalBytes || 0
+          });
+
+          // Trigger browser download
+          this.triggerBrowserDownload(event.body as Blob, fileName);
+        }
+      },
+      error: (_) => {
+        // Error handling is done in the catchError operator above
+        // This is just to ensure the subscription doesn't break
+      }
+    });
+
     return progressSubject.asObservable();
   }
 
@@ -432,6 +523,70 @@ export class FileOperationService {
     }
 
     return error?.message || 'Upload failed due to unknown error';
+  }
+
+  /**
+   * Get user-friendly error message for download failures
+   */
+  private getDownloadErrorMessage(error: any): string {
+    if (error?.message?.includes('cancelled')) {
+      return 'Download cancelled by user';
+    }
+
+    if (error?.status) {
+      switch (error.status) {
+        case 404:
+          return 'File not found or has been moved';
+        case 403:
+          return 'Permission denied: Cannot download this file';
+        case 413:
+          return 'File is too large to download';
+        case 500:
+          return 'Server error occurred during download';
+        case 503:
+          return 'Download service temporarily unavailable';
+        default:
+          return error?.error?.message || 'Download failed due to server error';
+      }
+    }
+
+    if (error?.message?.includes('network')) {
+      return 'Download failed due to network error';
+    }
+
+    return error?.message || 'Download failed due to unknown error';
+  }
+
+  /**
+   * Trigger browser download for the downloaded blob
+   */
+  private triggerBrowserDownload(blob: Blob, fileName: string): void {
+    try {
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to trigger download
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+
+      // Add to DOM, click, and remove
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+
+      // Clean up the temporary URL
+      window.URL.revokeObjectURL(url);
+
+      this.logger.debug('FileOperationService: Browser download triggered', { fileName });
+    } catch (error) {
+      this.logger.error('FileOperationService: Failed to trigger browser download', {
+        fileName,
+        error: (error as any)?.message || error
+      });
+      throw new Error('Failed to save downloaded file');
+    }
   }
 
   /**

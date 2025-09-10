@@ -248,9 +248,29 @@ export class FilesComponent implements OnInit {
   }
 
   onDownloadFile(): void {
-    console.log('Download file action triggered for:', this.selectedItem?.name);
-    // TODO: Implement file download functionality in future task
-    this.showMessage('File download functionality will be implemented in a future task');
+    if (!this.selectedItem || this.selectedItem.type !== 'file') {
+      this.showMessage('Please select a file to download');
+      return;
+    }
+
+    console.log('Download file action triggered for:', this.selectedItem.name);
+
+    // Start the download operation
+    this.fileOperationService.downloadFile(this.selectedItem.path).subscribe({
+      next: (progress) => {
+        if (progress.status === 'completed') {
+          this.showMessage(`File "${progress.fileName}" downloaded successfully`);
+        } else if (progress.status === 'error') {
+          this.showMessage(`Download failed: ${progress.error}`);
+        } else if (progress.status === 'cancelled') {
+          this.showMessage(`Download of "${progress.fileName}" was cancelled`);
+        }
+        // For 'pending' and 'in-progress' states, the progress dialog will handle the UI
+      },
+      error: (error) => {
+        this.showMessage(`Download failed: ${error.message}`);
+      }
+    });
   }
 
   onRenameItem(): void {

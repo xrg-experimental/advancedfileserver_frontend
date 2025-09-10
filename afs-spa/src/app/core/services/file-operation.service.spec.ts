@@ -13,8 +13,8 @@ describe('FileOperationService', () => {
   let loggerServiceSpy: jasmine.SpyObj<LoggerService>;
 
   beforeEach(() => {
-    const httpSpy = jasmine.createSpyObj('HttpService', ['post']);
-    const httpClientSpyObj = jasmine.createSpyObj('HttpClient', ['request']);
+    const httpSpy = jasmine.createSpyObj('HttpService', ['post', 'getFullUrl']);
+    const httpClientSpyObj = jasmine.createSpyObj('HttpClient', ['request', 'get']);
     const loggerSpy = jasmine.createSpyObj('LoggerService', ['debug', 'warn', 'error', 'info']);
 
     TestBed.configureTestingModule({
@@ -30,6 +30,9 @@ describe('FileOperationService', () => {
     httpServiceSpy = TestBed.inject(HttpService) as jasmine.SpyObj<HttpService>;
     httpClientSpy = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
     loggerServiceSpy = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
+    
+    // Set up default return value for getFullUrl
+    httpServiceSpy.getFullUrl.and.returnValue('http://localhost:3000/files/upload');
   });
 
   it('should be created', () => {
@@ -259,16 +262,34 @@ describe('FileOperationService', () => {
   });
 
   describe('downloadFile', () => {
-    it('should return progress observable for download (method signature)', (done) => {
+    it('should return download progress observable with correct initial state', (done) => {
+      // Mock a simple successful response
+      httpClientSpy.get = jasmine.createSpy('get').and.returnValue(of({
+        type: HttpEventType.Response,
+        body: new Blob(['file content'], { type: 'text/plain' })
+      } as HttpResponse<Blob>));
+
+      // Mock URL.createObjectURL and related DOM methods
+      spyOn(window.URL, 'createObjectURL').and.returnValue('blob:mock-url');
+      spyOn(window.URL, 'revokeObjectURL');
+      
+      const mockAnchor = {
+        href: '',
+        download: '',
+        style: { display: '' },
+        click: jasmine.createSpy('click')
+      } as any;
+      
+      spyOn(document, 'createElement').and.returnValue(mockAnchor);
+      spyOn(document.body, 'appendChild');
+      spyOn(document.body, 'removeChild');
+
       service.downloadFile('/test/file.txt').subscribe({
         next: (progress) => {
           expect(progress.type).toBe('download');
           expect(progress.fileName).toBe('file.txt');
           expect(progress.status).toBe('pending');
-          expect(loggerServiceSpy.debug).toHaveBeenCalledWith(
-            jasmine.stringContaining('Download method called (implementation pending)'),
-            jasmine.any(Object)
-          );
+          expect(progress.progress).toBe(0);
           done();
         }
       });
