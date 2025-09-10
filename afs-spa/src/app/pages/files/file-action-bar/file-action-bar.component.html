@@ -19,7 +19,7 @@
   </div>
 
   <div class="selection-info" *ngIf="selectedItem">
-    <mat-icon class="selection-icon">{{ selectedItem.type === 'file' ? 'description' : 'folder' }}</mat-icon>
+    <mat-icon class="selection-icon">{{ selectedItem.type === 'file' ? 'insert_drive_file' : 'folder' }}</mat-icon>
     <span class="selection-text">{{ selectedItem.name }}</span>
   </div>
 </div>
