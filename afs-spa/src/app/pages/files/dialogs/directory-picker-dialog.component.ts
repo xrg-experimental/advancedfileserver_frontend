@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FileService } from '../../../core/services/file.service';
 import { FileNode } from '../../../core/models/file.model';
 import { BreadcrumbItem } from '../../../shared';
+import { A11yModule } from '@angular/cdk/a11y';
 
 export interface DirectoryPickerDialogData {
   currentPath: string;
@@ -25,7 +26,8 @@ export interface DirectoryPickerDialogResult {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    A11yModule
   ],
   template: `
     <h2 mat-dialog-title>
@@ -42,7 +44,8 @@ export interface DirectoryPickerDialogResult {
           class="breadcrumb-item"
           [class.current]="last"
           (click)="navigateToPath(breadcrumb.path)"
-          [disabled]="isLoading">
+          [disabled]="last || isLoading"
+          [attr.aria-current]="last ? 'page' : null">
           {{ breadcrumb.name }}
           <mat-icon *ngIf="!last">chevron_right</mat-icon>
         </button>
@@ -60,7 +63,7 @@ export interface DirectoryPickerDialogResult {
       </div>
 
       <!-- Error message -->
-      <div class="error-message" *ngIf="error">
+      <div class="error-message" *ngIf="error" role="alert" aria-live="assertive">
         <mat-icon color="warn">error</mat-icon>
         <span>{{ error }}</span>
       </div>
@@ -79,7 +82,7 @@ export interface DirectoryPickerDialogResult {
 
         <!-- Folders -->
         <button
-          *ngFor="let folder of folders"
+          *ngFor="let folder of folders; trackBy: trackByPath"
           mat-button
           class="directory-item"
           [class.selected]="selectedPath === folder.path"
@@ -100,7 +103,7 @@ export interface DirectoryPickerDialogResult {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
+      <button mat-button (click)="onCancel()" cdkFocusInitial>Cancel</button>
       <button
         mat-raised-button
         color="primary"
@@ -256,6 +259,8 @@ export class DirectoryPickerDialogComponent implements OnInit {
     this.currentViewPath = data.currentPath;
     this.selectedPath = data.currentPath;
   }
+
+  trackByPath = (_: number, f: FileNode) => f.path;
 
   ngOnInit(): void {
     this.loadDirectory(this.currentViewPath);
