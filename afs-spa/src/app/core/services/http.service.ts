@@ -16,6 +16,16 @@ export class HttpService {
     private logger: LoggerService
   ) {}
 
+  // Build a full URL by combining apiBaseUrl and a path, ensuring exactly one slash between them.
+  getFullUrl(path: string): string {
+    const base = this.apiUrl?.endsWith('/') ? this.apiUrl.slice(0, -1) : this.apiUrl || '';
+    if (!path) {
+      return base;
+    }
+    const suffix = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${suffix}`;
+  }
+
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An unknown error occurred';
 

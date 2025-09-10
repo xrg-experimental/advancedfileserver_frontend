@@ -187,7 +187,7 @@ export class FileOperationService {
     formData.append('path', targetPath);
 
     // Create an HTTP request with progress tracking
-    const uploadRequest = new HttpRequest('POST', '/api/files/upload', formData, {
+    const uploadRequest = new HttpRequest('POST', this.http.getFullUrl('/files/upload'), formData, {
       reportProgress: true
     });
 
@@ -313,7 +313,7 @@ export class FileOperationService {
     }
 
     const currentProgress = progressSubject.value;
-    // Only cancel if operation is still active
+    // Only cancel if the operation is still active
     if (currentProgress.status !== 'pending' && currentProgress.status !== 'in-progress') {
       return;
     }
