@@ -248,10 +248,18 @@ export class FilesComponent implements OnInit {
       disableClose: false
     });
 
-    dialogRef.afterClosed().subscribe((result: RenameDialogResult | undefined) => {
-      if (result && this.selectedItem) {
-        this.performRename(this.selectedItem.path, result.newName);
+    dialogRef.afterClosed().subscribe((result: CreateDirectoryDialogResult | undefined) => {
+      if (!result) return;
+      const name = (result.directoryName ?? '').trim();
+      if (!name) {
+        this.showError('Folder name cannot be empty');
+        return;
       }
+      if (/[\/\\]/.test(name)) {
+        this.showError('Folder name cannot contain slashes');
+        return;
+      }
+      this.performCreateDirectory(this.currentPath, name);
     });
   }
 
