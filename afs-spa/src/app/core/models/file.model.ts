@@ -86,7 +86,7 @@ export interface OperationResponse {
 
 export interface NavigationState {
   currentPath: string;
-  breadcrumbs: BreadcrumbItem[];
+  breadcrumbs: ReadonlyArray<BreadcrumbItem>;
   canNavigateUp: boolean;
 }
 
