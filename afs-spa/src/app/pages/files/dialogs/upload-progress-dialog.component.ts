@@ -323,12 +323,21 @@ export class UploadProgressDialogComponent implements OnInit, OnDestroy {
   }
 
   formatTime(seconds: number): string {
+    if (!seconds || seconds < 0) {
+      return '0s';
+    }
+
+    // Cap at reasonable maximum (24 hours)
+    if (seconds > 86400) {
+      return '> 24h';
+    }
+
     if (seconds < 60) {
-      return `${seconds}s`;
+      return `${Math.round(seconds)}s`;
     } else if (seconds < 3600) {
       const minutes = Math.floor(seconds / 60);
       const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds}s`;
+      return `${minutes}m ${Math.round(remainingSeconds)}s`;
     } else {
       const hours = Math.floor(seconds / 3600);
       const minutes = Math.floor((seconds % 3600) / 60);
