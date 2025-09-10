@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -21,7 +22,8 @@ export interface CreateDirectoryDialogResult {
     MatButtonModule,
     MatInputModule,
     MatFormFieldModule,
-    MatIconModule
+    MatIconModule,
+    A11yModule
   ],
   template: `
     <h2 mat-dialog-title>
@@ -39,7 +41,8 @@ export interface CreateDirectoryDialogResult {
           #nameInput
           maxlength="255"
           placeholder="Enter folder name"
-          required>
+          required
+          cdkFocusInitial>
         <mat-error *ngIf="!isValidName()">
           {{ getValidationError() }}
         </mat-error>
@@ -73,7 +76,8 @@ export interface CreateDirectoryDialogResult {
       min-width: 300px;
       padding-top: 16px;
     }
-  `]
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateDirectoryDialogComponent {
   directoryName = '';
