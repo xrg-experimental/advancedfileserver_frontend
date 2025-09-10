@@ -40,16 +40,25 @@ export class FileOperationService {
 
     const url = this.http.getFullUrl('/files/rename');
 
-    return this.httpClient.post<OperationResponse>(url, null, { params }).pipe(
+    // The backend returns ResponseEntity<FileInfoResponse> without a { success } field.
+    // Consider the operation successful based on HTTP status code and normalize to OperationResponse.
+    return this.httpClient.post(url, null, { params, observe: 'response' }).pipe(
       timeout(10000),
-      retry({
-        count: 2,
-        delay: (_error, retryCount) => {
-          this.logger.warn(`Rename operation failed, retry ${retryCount}`);
-          return timer(1000 * retryCount);
+      map(resp => {
+        const success = resp.status >= 200 && resp.status < 300;
+        if (success) {
+          return { success: true } as OperationResponse;
         }
+        const body: any = resp.body;
+        const errorMsg = (body && (body.error || body.message || body.detail)) || `HTTP ${resp.status}`;
+        return { success: false, error: errorMsg } as OperationResponse;
       }),
-      catchError(error => this.handleOperationError('rename', error)),
+      catchError(error => {
+        // Convert HttpErrorResponse into a user-friendly OperationResponse consumed by components
+        const errBody = error?.error;
+        const errorMsg = (errBody && (errBody.error || errBody.message || errBody.detail)) || error?.message || 'Failed to rename item';
+        return of({ success: false, error: errorMsg } as OperationResponse);
+      }),
       finalize(() => this.cleanupCompletedOperations())
     );
   }
