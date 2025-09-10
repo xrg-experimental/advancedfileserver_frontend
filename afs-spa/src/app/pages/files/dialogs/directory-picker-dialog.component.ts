@@ -297,7 +297,10 @@ export class DirectoryPickerDialogComponent implements OnInit {
   }
 
   isExcluded(path: string): boolean {
-    return this.data.excludePath ? path === this.data.excludePath : false;
+    if (!this.data.excludePath) return false;
+    const src = this.data.excludePath.replace(/\/+$/, '');
+    const dst = path.replace(/\/+$/, '');
+    return dst === src || dst.startsWith(src + '/');
   }
 
   onCancel(): void {
