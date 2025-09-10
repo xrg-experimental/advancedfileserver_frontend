@@ -9,7 +9,7 @@ export interface NameValidatorOptions {
 }
 
 const INVALID_CHARS_REGEX = /[<>:"/\\|?*]/;
-const RESERVED_NAMES_REGEX = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+const RESERVED_NAMES_REGEX = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/i;
 const DOTS_ONLY_REGEX = /^\.+$/;
 
 export interface NameValidationResult {
