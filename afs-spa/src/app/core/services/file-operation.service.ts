@@ -307,21 +307,27 @@ export class FileOperationService {
   cancelOperation(operationId: string): void {
     this.logger.debug('FileOperationService: Cancelling operation', { operationId });
 
+    const progressSubject = this.operationsInProgress.get(operationId);
+    if (!progressSubject) {
+      return; // Operation doesn't exist
+    }
+
+    const currentProgress = progressSubject.value;
+    // Only cancel if operation is still active
+    if (currentProgress.status !== 'pending' && currentProgress.status !== 'in-progress') {
+      return;
+    }
+
     const cancellationSubject = this.operationCancellations.get(operationId);
     if (cancellationSubject) {
       cancellationSubject.next(true);
     }
 
-    const progressSubject = this.operationsInProgress.get(operationId);
-    if (progressSubject) {
-      const currentProgress = progressSubject.value;
-      progressSubject.next({
-        ...currentProgress,
-        status: 'cancelled'
-      });
-      progressSubject.complete();
-      this.operationsInProgress.delete(operationId);
-    }
+    progressSubject.next({
+      ...currentProgress,
+      status: 'cancelled'
+    });
+    progressSubject.complete();
 
     this.operationCancellations.delete(operationId);
   }
