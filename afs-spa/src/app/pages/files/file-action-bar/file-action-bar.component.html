@@ -19,7 +19,7 @@
     </ng-container>
   </div>
 
-  <div class="selection-info" *ngIf="selectedItem">
+  <div class="selection-info" *ngIf="selectedItem" aria-live="polite">
     <mat-icon class="selection-icon">{{ selectedItem.type === 'file' ? 'insert_drive_file' : 'folder' }}</mat-icon>
     <span class="selection-text">{{ selectedItem.name }}</span>
   </div>
