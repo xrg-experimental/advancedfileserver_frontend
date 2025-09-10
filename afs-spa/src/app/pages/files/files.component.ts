@@ -5,12 +5,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { FileService } from '../../core/services/file.service';
-import { FileNode } from '../../core/models/file.model';
-
-interface BreadcrumbItem {
-  name: string;
-  path: string;
-}
+import { FileNode, FilePermissions } from '../../core/models/file.model';
+import { BreadcrumbItem } from '../../shared';
+import { FileActionBarComponent } from './file-action-bar';
 
 @Component({
   selector: 'app-files',
@@ -20,7 +17,8 @@ interface BreadcrumbItem {
     MatIconModule,
     MatProgressSpinnerModule,
     MatButtonModule,
-    MatChipsModule
+    MatChipsModule,
+    FileActionBarComponent
   ],
   templateUrl: './files.component.html',
   styleUrl: './files.component.scss',
@@ -32,10 +30,19 @@ export class FilesComponent implements OnInit {
   fileList: FileNode[] = [];
   selectedItem: FileNode | null = null;
   breadcrumbs: BreadcrumbItem[] = [];
-  
+
   // Loading and error state
   isLoading = false;
   error: string | null = null;
+
+  // User permissions (mock data for now - will be replaced with real permissions)
+  permissions: FilePermissions = {
+    canRead: true,
+    canWrite: true,
+    canDelete: true,
+    canShare: true,
+    canUpload: true
+  };
 
   constructor(private fileService: FileService, private cdr: ChangeDetectorRef) {}
 
@@ -81,7 +88,7 @@ export class FilesComponent implements OnInit {
       this.selectedItem.selected = false;
     }
 
-    // Set new selection
+    // Set a new selection
     if (this.selectedItem === item) {
       // Deselect if clicking the same item
       this.selectedItem = null;
@@ -151,7 +158,7 @@ export class FilesComponent implements OnInit {
    */
   private generateBreadcrumbs(): void {
     this.breadcrumbs = [];
-    
+
     if (this.currentPath === '/') {
       this.breadcrumbs.push({ name: 'Root', path: '/' });
       return;
@@ -174,7 +181,7 @@ export class FilesComponent implements OnInit {
   }
 
   /**
-   * Get parent directory path
+   * Get the parent directory path
    */
   private getParentPath(path: string): string {
     if (path === '/') {
@@ -187,5 +194,36 @@ export class FilesComponent implements OnInit {
     }
 
     return path.substring(0, lastSlashIndex);
+  }
+
+  // Action bar event handlers (placeholder implementations)
+  onUploadFile(): void {
+    console.log('Upload file action triggered');
+    // TODO: Implement file upload functionality
+  }
+
+  onDownloadFile(): void {
+    console.log('Download file action triggered for:', this.selectedItem?.name);
+    // TODO: Implement file download functionality
+  }
+
+  onRenameItem(): void {
+    console.log('Rename item action triggered for:', this.selectedItem?.name);
+    // TODO: Implement rename functionality
+  }
+
+  onMoveItem(): void {
+    console.log('Move item action triggered for:', this.selectedItem?.name);
+    // TODO: Implement move functionality
+  }
+
+  onDeleteItem(): void {
+    console.log('Delete item action triggered for:', this.selectedItem?.name);
+    // TODO: Implement delete functionality
+  }
+
+  onCreateDirectory(): void {
+    console.log('Create directory action triggered');
+    // TODO: Implement create directory functionality
   }
 }

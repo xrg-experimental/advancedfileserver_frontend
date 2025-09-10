@@ -1,0 +1,114 @@
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--afs-action-bar-bg, #fafafa);
+  border-bottom: 1px solid var(--afs-action-bar-border, #e0e0e0);
+  margin-bottom: 16px;
+  border-radius: 4px 4px 0 0;
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .action-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 120px;
+      height: 36px;
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .button-label {
+        font-weight: 500;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      // Only apply neutral styling when no Material color class is present
+      &.mat-mdc-raised-button:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+        background-color: var(--afs-button-neutral-bg, #fff);
+        color: var(--afs-button-neutral-fg, #333);
+        border: 1px solid var(--afs-button-neutral-border, #ddd);
+        &:hover:not(:disabled) {
+          background-color: var(--afs-button-neutral-hover-bg, #f5f5f5);
+        }
+      }
+    }
+  }
+
+  .selection-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--afs-selection-info-bg, #e3f2fd);
+    border-radius: 4px;
+    color: var(--afs-selection-info-fg, #1976d2);
+    font-size: 14px;
+
+    .selection-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .selection-text {
+      font-weight: 500;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .action-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+
+    .action-buttons {
+      justify-content: center;
+
+      .action-button {
+        flex: 1;
+        min-width: 100px;
+      }
+    }
+
+    .selection-info {
+      justify-content: center;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .action-bar {
+    padding: 12px;
+
+    .action-buttons {
+      .action-button {
+        .button-label {
+          display: none;
+        }
+
+        min-width: 48px;
+        justify-content: center;
+      }
+    }
+  }
+}

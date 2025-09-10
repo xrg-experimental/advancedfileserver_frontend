@@ -1,3 +1,5 @@
+import { BreadcrumbItem } from '../../shared';
+
 // API Response interfaces
 export interface ApiFileEntry {
   name: string;
@@ -81,4 +83,11 @@ export interface OperationResponse {
   success: boolean;
   message?: string;
   error?: string;
+}
+
+
+export interface NavigationState {
+  currentPath: string;
+  breadcrumbs: ReadonlyArray<BreadcrumbItem>;
+  canNavigateUp: boolean;
 }

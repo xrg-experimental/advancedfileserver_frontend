@@ -1,4 +1,17 @@
 <div class="files-container">
+  <!-- File Action Bar -->
+  <app-file-action-bar
+    [selectedItem]="selectedItem"
+    [currentPath]="currentPath"
+    [permissions]="permissions"
+    (uploadFile)="onUploadFile()"
+    (downloadFile)="onDownloadFile()"
+    (renameItem)="onRenameItem()"
+    (moveItem)="onMoveItem()"
+    (deleteItem)="onDeleteItem()"
+    (createDirectory)="onCreateDirectory()">
+  </app-file-action-bar>
+
   <!-- Navigation Header -->
   <div class="navigation-header">
     <!-- Up Navigation Button -->

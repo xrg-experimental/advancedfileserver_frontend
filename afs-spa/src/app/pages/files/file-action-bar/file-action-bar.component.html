@@ -1,0 +1,26 @@
+<div class="action-bar" role="toolbar" aria-label="File actions">
+  <div class="action-buttons">
+    <ng-container *ngFor="let action of actions; trackBy: trackById">
+      <ng-container *ngIf="action.visible">
+        <span [matTooltip]="action.label">
+          <button
+            mat-raised-button
+            class="action-button"
+            type="button"
+            [disabled]="!action.enabled"
+            [color]="action.id === 'delete' ? 'warn' : (action.id === 'upload' || action.id === 'create-directory' ? 'primary' : null)"
+            (click)="onActionClick(action.id)"
+            [attr.aria-label]="action.label">
+            <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+            <span class="button-label">{{ action.label }}</span>
+          </button>
+        </span>
+      </ng-container>
+    </ng-container>
+  </div>
+
+  <div class="selection-info" *ngIf="selectedItem" aria-live="polite">
+    <mat-icon class="selection-icon">{{ selectedItem.type === 'file' ? 'insert_drive_file' : 'folder' }}</mat-icon>
+    <span class="selection-text">{{ selectedItem.name }}</span>
+  </div>
+</div>
