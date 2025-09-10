@@ -25,7 +25,7 @@ import { ActionConfig, ActionId } from '../../../shared';
     MatTooltipModule
   ],
   templateUrl: './file-action-bar.component.html',
-  styleUrl: './file-action-bar.component.scss',
+  styleUrls: ['./file-action-bar.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FileActionBarComponent implements OnChanges, OnInit {
