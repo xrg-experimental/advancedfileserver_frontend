@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { getNameValidationError as getNameValidationErrorUtil, isValidName as isValidNameUtil } from '../../../shared/validators/file-name.validator';
 
 export interface CreateDirectoryDialogResult {
   directoryName: string;
@@ -97,48 +98,10 @@ export class CreateDirectoryDialogComponent {
   }
 
   isValidName(): boolean {
-    const trimmed = this.directoryName?.trim();
-    if (!trimmed) {
-      return false;
-    }
-
-    // Check for invalid characters
-    const invalidChars = /[<>:"/\\|?*]/;
-    if (invalidChars.test(trimmed)) {
-      return false;
-    }
-
-    // Check for reserved names (Windows)
-    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-    if (reservedNames.test(trimmed)) {
-      return false;
-    }
-
-    // Check for names that are just dots
-    return !/^\.+$/.test(trimmed);
+    return isValidNameUtil(this.directoryName, { label: 'Folder name', forbidDotsOnly: true });
   }
 
   getValidationError(): string {
-    const trimmed = this.directoryName?.trim();
-
-    if (!trimmed) {
-      return 'Folder name cannot be empty';
-    }
-
-    const invalidChars = /[<>:"/\\|?*]/;
-    if (invalidChars.test(trimmed)) {
-      return 'Name contains invalid characters: < > : " / \\ | ? *';
-    }
-
-    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-    if (reservedNames.test(trimmed)) {
-      return 'This name is reserved by the system';
-    }
-
-    if (/^\.+$/.test(trimmed)) {
-      return 'Folder name cannot be only dots';
-    }
-
-    return '';
+    return getNameValidationErrorUtil(this.directoryName, { label: 'Folder name', forbidDotsOnly: true });
   }
 }

@@ -5,6 +5,7 @@ import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { getNameValidationError as getNameValidationErrorUtil, isValidName as isValidNameUtil } from '../../../shared/validators/file-name.validator';
 
 export interface RenameDialogData {
   currentName: string;
@@ -89,39 +90,10 @@ export class RenameDialogComponent {
   }
 
   isValidName(): boolean {
-    const trimmed = this.newName?.trim();
-    if (!trimmed) {
-      return false;
-    }
-
-    // Check for invalid characters
-    const invalidChars = /[<>:"/\\|?*]/;
-    if (invalidChars.test(trimmed)) {
-      return false;
-    }
-
-    // Check for reserved names (Windows)
-    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-    return !reservedNames.test(trimmed);
+    return isValidNameUtil(this.newName);
   }
 
   getValidationError(): string {
-    const trimmed = this.newName?.trim();
-
-    if (!trimmed) {
-      return 'Name cannot be empty';
-    }
-
-    const invalidChars = /[<>:"/\\|?*]/;
-    if (invalidChars.test(trimmed)) {
-      return 'Name contains invalid characters: < > : " / \\ | ? *';
-    }
-
-    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-    if (reservedNames.test(trimmed)) {
-      return 'This name is reserved by the system';
-    }
-
-    return '';
+    return getNameValidationErrorUtil(this.newName);
   }
 }
