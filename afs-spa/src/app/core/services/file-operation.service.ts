@@ -69,17 +69,28 @@ export class FileOperationService {
 
     this.logger.debug('FileOperationService: Moving item', { sourcePath, targetPath });
 
-    return this.http.post<OperationResponse>('/files/move', request)
-      .pipe(
-        retry({
-          count: 2,
-          delay: (error, retryCount) => {
-            this.logger.warn(`Move operation failed, retry ${retryCount}`, { error });
-            return timer(1000 * retryCount);
-          }
-        }),
-        catchError(error => this.handleOperationError('move', error))
-      );
+    const url = this.http.getFullUrl('/files/move');
+
+    // The backend returns ResponseEntity<FileInfoResponse> without a { success } field.
+    // Consider the operation successful based on HTTP status code and normalize to OperationResponse.
+    return this.httpClient.post(url, request, { observe: 'response' }).pipe(
+      timeout(10000),
+      map(resp => {
+        const success = resp.status >= 200 && resp.status < 300;
+        if (success) {
+          return { success: true } as OperationResponse;
+        }
+        const body: any = resp.body;
+        const errorMsg = (body && (body.error || body.message || body.detail)) || `HTTP ${resp.status}`;
+        return { success: false, error: errorMsg } as OperationResponse;
+      }),
+      catchError(error => {
+        const errBody = error?.error;
+        const errorMsg = (errBody && (errBody.error || errBody.message || errBody.detail)) || error?.message || 'Failed to move item';
+        return of({ success: false, error: errorMsg } as OperationResponse);
+      }),
+      finalize(() => this.cleanupCompletedOperations())
+    );
   }
 
   /**
