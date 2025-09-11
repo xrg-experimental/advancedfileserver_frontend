@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
-import { catchError, retry, timeout, finalize, takeUntil, map } from 'rxjs/operators';
+import { catchError, retry, timeout, finalize, takeUntil, map, filter } from 'rxjs/operators';
 import { HttpEventType, HttpRequest, HttpClient } from '@angular/common/http';
 import {
   OperationProgress,
@@ -207,14 +207,7 @@ export class FileOperationService {
 
     // Start the upload
     this.httpClient.request(uploadRequest).pipe(
-      takeUntil(cancellationSubject.pipe(
-        map(cancelled => {
-          if (cancelled) {
-            throw new Error('Upload cancelled by user');
-          }
-          return cancelled;
-        })
-      )),
+      takeUntil(cancellationSubject.pipe(filter(Boolean))),
       catchError(error => {
         this.logger.error('FileOperationService: Upload failed', {
           operationId,
@@ -323,14 +316,7 @@ export class FileOperationService {
       observe: 'events',
       responseType: 'blob'
     }).pipe(
-      takeUntil(cancellationSubject.pipe(
-        map(cancelled => {
-          if (cancelled) {
-            throw new Error('Download cancelled by user');
-          }
-          return cancelled;
-        })
-      )),
+      takeUntil(cancellationSubject.pipe(filter(Boolean))),
       catchError(error => {
         this.logger.error('FileOperationService: Download failed', {
           operationId,
@@ -359,12 +345,16 @@ export class FileOperationService {
       })
     ).subscribe({
       next: (event) => {
-        if (event.type === HttpEventType.DownloadProgress && event.total) {
-          const progress = Math.round((event.loaded / event.total) * 100);
+        if (event.type === HttpEventType.DownloadProgress) {
+          const total = event.total ?? progressSubject.value.totalBytes ?? 0;
+          const hasTotal = total > 0;
+          const progress = hasTotal
+            ? Math.round((event.loaded / total) * 100)
+            : progressSubject.value.progress;
           const estimatedTimeRemaining = this.calculateEstimatedTime(
             operationId,
             event.loaded,
-            event.total,
+            total,
             progressSubject.value.estimatedTimeRemaining
           );
 
@@ -373,7 +363,7 @@ export class FileOperationService {
             progress,
             status: 'in-progress',
             bytesTransferred: event.loaded,
-            totalBytes: event.total,
+            totalBytes: hasTotal ? total : undefined,
             estimatedTimeRemaining
           });
 
@@ -391,15 +381,23 @@ export class FileOperationService {
             filePath
           });
 
+          // Prefer server-provided filename if available
+          const disposition = event.headers?.get('content-disposition') || '';
+          const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
+          const headerFileName = match ? decodeURIComponent(match[1].replace(/"/g, '')) : null;
+          const finalFileName = headerFileName || fileName;
+          const blob = event.body as Blob;
+
           progressSubject.next({
             ...progressSubject.value,
             progress: 100,
             status: 'completed',
-            bytesTransferred: progressSubject.value.totalBytes || 0
+            bytesTransferred: blob.size,
+            totalBytes: blob.size
           });
 
           // Trigger browser download
-          this.triggerBrowserDownload(event.body as Blob, fileName);
+          this.triggerBrowserDownload(blob, finalFileName);
         }
       },
       error: (_) => {
