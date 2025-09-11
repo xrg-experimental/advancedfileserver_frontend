@@ -3,7 +3,7 @@ import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
 import { catchError, retry, timeout, finalize, takeUntil, map } from 'rxjs/operators';
-import { HttpEventType, HttpRequest, HttpClient, HttpParams } from '@angular/common/http';
+import { HttpEventType, HttpRequest, HttpClient } from '@angular/common/http';
 import {
   OperationProgress,
   RenameRequest,
@@ -31,10 +31,8 @@ export class FileOperationService {
    * Rename a file or directory
    */
   renameItem(oldPath: string, newName: string): Observable<OperationResponse> {
-    // Server expects POST with query parameters (?path=...&newName=...)
-    const params = new HttpParams()
-      .set('path', oldPath)
-      .set('newName', newName);
+    // Server now expects a JSON body (RenameRequest) instead of query parameters
+    const request: RenameRequest = { path: oldPath, newName };
 
     this.logger.debug('FileOperationService: Renaming item', { oldPath, newName });
 
@@ -42,7 +40,7 @@ export class FileOperationService {
 
     // The backend returns ResponseEntity<FileInfoResponse> without a { success } field.
     // Consider the operation successful based on HTTP status code and normalize to OperationResponse.
-    return this.httpClient.post(url, null, { params, observe: 'response' }).pipe(
+    return this.httpClient.post(url, request, { observe: 'response' }).pipe(
       timeout(10000),
       map(resp => {
         const success = resp.status >= 200 && resp.status < 300;

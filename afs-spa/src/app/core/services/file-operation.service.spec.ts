@@ -41,22 +41,21 @@ describe('FileOperationService', () => {
 
   describe('renameItem', () => {
     it('should rename item successfully', (done) => {
-      const mockResponse: OperationResponse = { success: true, message: 'Item renamed successfully' };
+      // Arrange
       httpServiceSpy.getFullUrl.and.returnValue('http://localhost:3000/files/rename');
-      httpClientSpy.post.and.returnValue(of(mockResponse));
+      const httpResp = new HttpResponse({ status: 200, body: { /* FileInfoResponse */ } });
+      httpClientSpy.post.and.returnValue(of(httpResp));
 
+      // Act
       service.renameItem('/test/file.txt', 'newname.txt').subscribe({
         next: (response) => {
-          expect(response).toEqual(mockResponse);
-
-          expect(httpClientSpy.post).toHaveBeenCalled();
-          const args = (httpClientSpy.post as jasmine.Spy).calls.mostRecent().args;
+          // Assert
+          expect(response).toEqual({ success: true } as OperationResponse);
+          expect(httpClientSpy.post).toHaveBeenCalledTimes(1);
+          const args = httpClientSpy.post.calls.mostRecent().args;
           expect(args[0]).toBe('http://localhost:3000/files/rename');
-          expect(args[1]).toBeNull();
-          const options = args[2];
-          expect(options.params.get('path')).toBe('/test/file.txt');
-          expect(options.params.get('newName')).toBe('newname.txt');
-
+          expect(args[1]).toEqual({ path: '/test/file.txt', newName: 'newname.txt' });
+          expect(args[2]).toEqual(jasmine.objectContaining({ observe: 'response' }));
           expect(loggerServiceSpy.debug).toHaveBeenCalled();
           done();
         }
@@ -64,14 +63,14 @@ describe('FileOperationService', () => {
     });
 
     it('should handle rename errors with user-friendly messages', (done) => {
-      const error = new Error('permission denied');
       httpServiceSpy.getFullUrl.and.returnValue('http://localhost:3000/files/rename');
-      httpClientSpy.post.and.returnValue(throwError(() => error));
+      const httpError = { status: 403, error: { message: 'Permission denied' }, message: 'Forbidden' };
+      httpClientSpy.post.and.returnValue(throwError(() => httpError));
 
       service.renameItem('/test/file.txt', 'newname.txt').subscribe({
-        error: (err) => {
-          expect(err.message).toContain('Permission denied');
-          expect(loggerServiceSpy.error).toHaveBeenCalled();
+        next: (resp) => {
+          expect(resp.success).toBeFalse();
+          expect(resp.error).toContain('Permission denied');
           done();
         }
       });
