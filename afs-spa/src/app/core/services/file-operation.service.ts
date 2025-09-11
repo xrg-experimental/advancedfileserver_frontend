@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { LoggerService } from './logger.service';
 import { Observable, throwError, timer, of, BehaviorSubject } from 'rxjs';
-import { catchError, retry, timeout, finalize, takeUntil, map } from 'rxjs/operators';
+import { catchError, retry, timeout, finalize, takeUntil, map, filter } from 'rxjs/operators';
 import { HttpEventType, HttpRequest, HttpClient } from '@angular/common/http';
 import {
   OperationProgress,
@@ -19,6 +19,7 @@ import {
 export class FileOperationService {
   private operationsInProgress = new Map<string, BehaviorSubject<OperationProgress>>();
   private operationCancellations = new Map<string, BehaviorSubject<boolean>>();
+  private operationStartTimes = new Map<string, number>();
 
   constructor(
     private http: HttpService,
@@ -30,20 +31,32 @@ export class FileOperationService {
    * Rename a file or directory
    */
   renameItem(oldPath: string, newName: string): Observable<OperationResponse> {
-    const request: RenameRequest = { oldPath, newName };
+    // Server now expects a JSON body (RenameRequest) instead of query parameters
+    const request: RenameRequest = { path: oldPath, newName };
 
     this.logger.debug('FileOperationService: Renaming item', { oldPath, newName });
 
-    return this.http.post<OperationResponse>('/files/rename', request).pipe(
+    const url = this.http.getFullUrl('/files/rename');
+
+    // The backend returns ResponseEntity<FileInfoResponse> without a { success } field.
+    // Consider the operation successful based on HTTP status code and normalize to OperationResponse.
+    return this.httpClient.post(url, request, { observe: 'response' }).pipe(
       timeout(10000),
-      retry({
-        count: 2,
-        delay: (_error, retryCount) => {
-          this.logger.warn(`Rename operation failed, retry ${retryCount}`);
-          return timer(1000 * retryCount);
+      map(resp => {
+        const success = resp.status >= 200 && resp.status < 300;
+        if (success) {
+          return { success: true } as OperationResponse;
         }
+        const body: any = resp.body;
+        const errorMsg = (body && (body.error || body.message || body.detail)) || `HTTP ${resp.status}`;
+        return { success: false, error: errorMsg } as OperationResponse;
       }),
-      catchError(error => this.handleOperationError('rename', error)),
+      catchError(error => {
+        // Convert HttpErrorResponse into a user-friendly OperationResponse consumed by components
+        const errBody = error?.error;
+        const errorMsg = (errBody && (errBody.error || errBody.message || errBody.detail)) || error?.message || 'Failed to rename item';
+        return of({ success: false, error: errorMsg } as OperationResponse);
+      }),
       finalize(() => this.cleanupCompletedOperations())
     );
   }
@@ -52,21 +65,34 @@ export class FileOperationService {
    * Move a file or directory to a new location
    */
   moveItem(sourcePath: string, targetPath: string): Observable<OperationResponse> {
-    const request: MoveRequest = { sourcePath, targetPath };
+    const normalizedSource = this.normalizePath(sourcePath);
+    const normalizedTarget = this.normalizePath(targetPath);
+    const request: MoveRequest = { sourcePath: normalizedSource, targetPath: normalizedTarget };
 
-    this.logger.debug('FileOperationService: Moving item', { sourcePath, targetPath });
+    this.logger.debug('FileOperationService: Moving item', { sourcePath: normalizedSource, targetPath: normalizedTarget });
 
-    return this.http.post<OperationResponse>('/files/move', request)
-      .pipe(
-        retry({
-          count: 2,
-          delay: (error, retryCount) => {
-            this.logger.warn(`Move operation failed, retry ${retryCount}`, { error });
-            return timer(1000 * retryCount);
-          }
-        }),
-        catchError(error => this.handleOperationError('move', error))
-      );
+    const url = this.http.getFullUrl('/files/move');
+
+    // The backend returns ResponseEntity<FileInfoResponse> without a { success } field.
+    // Consider the operation successful based on HTTP status code and normalize to OperationResponse.
+    return this.httpClient.post(url, request, { observe: 'response' }).pipe(
+      timeout(10000),
+      map(resp => {
+        const success = resp.status >= 200 && resp.status < 300;
+        if (success) {
+          return { success: true } as OperationResponse;
+        }
+        const body: any = resp.body;
+        const errorMsg = (body && (body.error || body.message || body.detail)) || `HTTP ${resp.status}`;
+        return { success: false, error: errorMsg } as OperationResponse;
+      }),
+      catchError(error => {
+        const errBody = error?.error;
+        const errorMsg = (errBody && (errBody.error || errBody.message || errBody.detail)) || error?.message || 'Failed to move item';
+        return of({ success: false, error: errorMsg } as OperationResponse);
+      }),
+      finalize(() => this.cleanupCompletedOperations())
+    );
   }
 
   /**
@@ -173,6 +199,7 @@ export class FileOperationService {
     this.operationsInProgress.set(operationId, progressSubject);
     const cancellationSubject = new BehaviorSubject<boolean>(false);
     this.operationCancellations.set(operationId, cancellationSubject);
+    this.operationStartTimes.set(operationId, Date.now());
 
     this.logger.debug('FileOperationService: Starting file upload', {
       fileName: file.name,
@@ -193,14 +220,7 @@ export class FileOperationService {
 
     // Start the upload
     this.httpClient.request(uploadRequest).pipe(
-      takeUntil(cancellationSubject.pipe(
-        map(cancelled => {
-          if (cancelled) {
-            throw new Error('Upload cancelled by user');
-          }
-          return cancelled;
-        })
-      )),
+      takeUntil(cancellationSubject.pipe(filter(Boolean))),
       catchError(error => {
         this.logger.error('FileOperationService: Upload failed', {
           operationId,
@@ -222,6 +242,7 @@ export class FileOperationService {
         setTimeout(() => {
           this.operationsInProgress.delete(operationId);
           this.operationCancellations.delete(operationId);
+          this.operationStartTimes.delete(operationId);
           progressSubject.complete();
         }, 1000); // Keep progress visible for 1 second after completion
       })
@@ -230,6 +251,7 @@ export class FileOperationService {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           const progress = Math.round((event.loaded / event.total) * 100);
           const estimatedTimeRemaining = this.calculateEstimatedTime(
+            operationId,
             event.loaded,
             event.total,
             progressSubject.value.estimatedTimeRemaining
@@ -274,7 +296,7 @@ export class FileOperationService {
   }
 
   /**
-   * Download a file with progress tracking (method signature for future implementation)
+   * Download a file with progress tracking
    */
   downloadFile(filePath: string): Observable<OperationProgress> {
     const operationId = this.generateOperationId();
@@ -288,16 +310,115 @@ export class FileOperationService {
     });
 
     this.operationsInProgress.set(operationId, progressSubject);
-    this.operationCancellations.set(operationId, new BehaviorSubject<boolean>(false));
+    const cancellationSubject = new BehaviorSubject<boolean>(false);
+    this.operationCancellations.set(operationId, cancellationSubject);
+    this.operationStartTimes.set(operationId, Date.now());
 
-    // TODO: Implement actual download logic in future task
-    // For now, return the progress observable that will be implemented later
-    this.logger.debug('FileOperationService: Download method called (implementation pending)', {
+    this.logger.debug('FileOperationService: Starting file download', {
       filePath,
-      operationId
+      operationId,
+      fileName
     });
 
-    // Simulate the pending state for now
+    // Create a download request with progress tracking
+    const downloadUrl = this.http.getFullUrl(`/files/download?path=${encodeURIComponent(filePath)}`);
+
+    // Use HttpClient directly to get progress events
+    this.httpClient.get(downloadUrl, {
+      reportProgress: true,
+      observe: 'events',
+      responseType: 'blob'
+    }).pipe(
+      takeUntil(cancellationSubject.pipe(filter(Boolean))),
+      catchError(error => {
+        this.logger.error('FileOperationService: Download failed', {
+          operationId,
+          fileName,
+          filePath,
+          error: error?.message || error
+        });
+
+        const errorMessage = this.getDownloadErrorMessage(error);
+        progressSubject.next({
+          ...progressSubject.value,
+          status: 'error',
+          error: errorMessage
+        });
+
+        return throwError(() => new Error(errorMessage));
+      }),
+      finalize(() => {
+        // Clean up after completion, error, or cancellation
+        setTimeout(() => {
+          this.operationsInProgress.delete(operationId);
+          this.operationCancellations.delete(operationId);
+          this.operationStartTimes.delete(operationId);
+          progressSubject.complete();
+        }, 1000); // Keep progress visible for 1 second after completion
+      })
+    ).subscribe({
+      next: (event) => {
+        if (event.type === HttpEventType.DownloadProgress) {
+          const total = event.total ?? progressSubject.value.totalBytes ?? 0;
+          const hasTotal = total > 0;
+          const progress = hasTotal
+            ? Math.round((event.loaded / total) * 100)
+            : progressSubject.value.progress;
+          const estimatedTimeRemaining = this.calculateEstimatedTime(
+            operationId,
+            event.loaded,
+            total,
+            progressSubject.value.estimatedTimeRemaining
+          );
+
+          progressSubject.next({
+            ...progressSubject.value,
+            progress,
+            status: 'in-progress',
+            bytesTransferred: event.loaded,
+            totalBytes: hasTotal ? total : undefined,
+            estimatedTimeRemaining
+          });
+
+          this.logger.debug('FileOperationService: Download progress', {
+            operationId,
+            progress,
+            bytesTransferred: event.loaded,
+            totalBytes: event.total
+          });
+        } else if (event.type === HttpEventType.Response && event.body) {
+          // Download completed successfully, trigger browser download
+          this.logger.info('FileOperationService: Download completed successfully', {
+            operationId,
+            fileName,
+            filePath
+          });
+
+          // Prefer server-provided filename if available
+          const disposition = event.headers?.get('content-disposition') || '';
+          const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
+          const headerFileName = match ? decodeURIComponent(match[1].replace(/"/g, '')) : null;
+          const finalFileName = headerFileName || fileName;
+          const blob = event.body as Blob;
+
+          progressSubject.next({
+            ...progressSubject.value,
+            progress: 100,
+            status: 'completed',
+            bytesTransferred: blob.size,
+            totalBytes: blob.size
+          });
+
+          // Trigger browser download
+          this.triggerBrowserDownload(blob, finalFileName);
+        }
+      },
+      error: (_) => {
+        // Error handling is done in the catchError operator above
+        // This is just to ensure the subscription doesn't break
+      }
+    });
+
     return progressSubject.asObservable();
   }
 
@@ -330,6 +451,7 @@ export class FileOperationService {
     progressSubject.complete();
 
     this.operationCancellations.delete(operationId);
+    this.operationStartTimes.delete(operationId);
   }
 
   /**
@@ -435,14 +557,81 @@ export class FileOperationService {
   }
 
   /**
+   * Get user-friendly error message for download failures
+   */
+  private getDownloadErrorMessage(error: any): string {
+    if (error?.message?.includes('cancelled')) {
+      return 'Download cancelled by user';
+    }
+
+    if (error?.status) {
+      switch (error.status) {
+        case 401:
+          return 'You are not signed in or your session has expired';
+        case 404:
+          return 'File not found or has been moved';
+        case 403:
+          return 'Permission denied: Cannot download this file';
+        case 413:
+          return 'File is too large to download';
+        case 500:
+          return 'Server error occurred during download';
+        case 503:
+          return 'Download service temporarily unavailable';
+        default:
+          return error?.error?.message || 'Download failed due to server error';
+      }
+    }
+
+    if (error?.message?.includes('network')) {
+      return 'Download failed due to network error';
+    }
+
+    return error?.message || 'Download failed due to unknown error';
+  }
+
+  /**
+   * Trigger browser download for the downloaded blob
+   */
+  private triggerBrowserDownload(blob: Blob, fileName: string): void {
+    try {
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to trigger download
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+
+      // Add to DOM, click, and remove
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+
+      // Clean up the temporary URL after the click
+      setTimeout(() => window.URL.revokeObjectURL(url), 0);
+
+      this.logger.debug('FileOperationService: Browser download triggered', { fileName });
+    } catch (error) {
+      this.logger.error('FileOperationService: Failed to trigger browser download', {
+        fileName,
+        error: (error as any)?.message || error
+      });
+      throw new Error('Failed to save downloaded file');
+    }
+  }
+
+  /**
    * Calculate estimated time remaining for upload
    */
   private calculateEstimatedTime(
+    operationId: string,
     bytesTransferred: number,
     totalBytes: number,
     previousEstimate?: number
   ): number {
-    if (bytesTransferred === 0) {
+    if (bytesTransferred <= 0 || totalBytes <= 0) {
       return 0;
     }
 
@@ -451,22 +640,47 @@ export class FileOperationService {
       return 0;
     }
 
-    // Simple estimation based on current progress
-    // In a real implementation, you might want to track transfer rate over time
-    const remainingBytes = totalBytes - bytesTransferred;
-    const transferRate = bytesTransferred / (Date.now() / 1000); // bytes per second (rough estimate)
+    const startTime = this.operationStartTimes.get(operationId);
+    if (!startTime) {
+      // Initialize if missing and return the previous estimate (or 0) for this tick
+      this.operationStartTimes.set(operationId, Date.now());
+      return previousEstimate ? Math.round(previousEstimate) : 0;
+    }
 
-    if (transferRate === 0) {
+    const elapsedSec = (Date.now() - startTime) / 1000;
+    if (elapsedSec <= 0) {
       return previousEstimate || 0;
     }
 
-    const estimatedSeconds = remainingBytes / transferRate;
-
-    // Smooth the estimate with the previous value to avoid jumpy numbers
-    if (previousEstimate) {
-      return Math.round((estimatedSeconds + previousEstimate) / 2);
+    const rate = bytesTransferred / elapsedSec; // bytes per second
+    if (!isFinite(rate) || rate <= 0) {
+      return previousEstimate || 0;
     }
 
-    return Math.round(estimatedSeconds);
+    const remainingBytes = Math.max(0, totalBytes - bytesTransferred);
+    const etaSec = remainingBytes / rate;
+
+    // Smooth the estimate with the previous value to avoid jumpy numbers
+    const smoothed = previousEstimate != null
+      ? (previousEstimate * 0.7 + etaSec * 0.3)
+      : etaSec;
+
+    return Math.round(smoothed);
+  }
+
+  // Normalize absolute and relative-like paths into a canonical absolute form used by API
+  private normalizePath(p: string): string {
+    if (!p) { return '/'; }
+    let out = p.replace(/\\/g, '/');
+    out = out.replace(/\/+/g, '/');
+    // Ensure single leading slash
+    if (!out.startsWith('/')) {
+      out = '/' + out;
+    }
+    // Remove trailing slash except for root
+    if (out.length > 1) {
+      out = out.replace(/\/+$/g, '');
+    }
+    return out;
   }
 }

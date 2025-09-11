@@ -23,6 +23,11 @@ export interface ApiFileListResponse {
   totalDirectories: number;
 }
 
+// API request DTOs
+export interface ListFilesRequest {
+  path: string;
+}
+
 // Component interfaces
 export interface FileNode {
   name: string;
@@ -61,7 +66,7 @@ export interface OperationProgress {
 
 // API operation request/response interfaces
 export interface RenameRequest {
-  oldPath: string;
+  path: string;
   newName: string;
 }
 

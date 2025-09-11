@@ -34,3 +34,10 @@ permissions:
 	modified:   .github/workflows/kiro-integration.yml
 Update kiro-github-setup.py to create identical files .github/workflows/auto-pr-creation.yml and .github/workflows/kiro-integration.yml. 
 These files needed to be changed to make GitHub workflow run.
+
+
+The move command is not working as expected.
+Assume we have a file example.txt in the directory /logs and we want to move it to /.
+The API "/api/files/move" should be called with a MoveRequest containing the
+variables "sourcePath" with the value "/logs/example.txt" and "targetPath" with the value "/example.txt".
+Instead, I find "/logs/logs\example.txt" as sourcePath and "//example.txt" as targetPath.

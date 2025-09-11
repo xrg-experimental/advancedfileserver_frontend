@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { FileNode, ApiFileListResponse, ApiFileEntry } from '../models/file.model';
+import { FileNode, ApiFileListResponse, ApiFileEntry, ListFilesRequest } from '../models/file.model';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +11,8 @@ export class FileService {
   constructor(private http: HttpService) {}
 
   getFiles(path: string = '/'): Observable<FileNode[]> {
-    return this.http.get<ApiFileListResponse>(`/files/list?path=${encodeURIComponent(path)}`)
+    const dto: ListFilesRequest = { path };
+    return this.http.post<ApiFileListResponse>(`/files/list`, dto)
       .pipe(
         map(response => this.transformApiResponse(response))
       );
@@ -24,7 +25,7 @@ export class FileService {
   private transformApiEntry(entry: ApiFileEntry, parentPath: string): FileNode {
     // Construct full path properly
     const fullPath = this.buildFullPath(entry.path, parentPath);
-    
+
     return {
       name: entry.name,
       type: entry.directory ? 'folder' : 'file',
@@ -39,16 +40,34 @@ export class FileService {
   }
 
   private buildFullPath(entryPath: string, parentPath: string): string {
-    // If the entry path is absolute, use it directly
-    if (entryPath.startsWith('/')) {
-      return entryPath;
+    const normalizeSlashes = (p: string) => (p || '').replace(/\\/g, '/').replace(/\/+/g, '/');
+    const stripLeadingSlash = (p: string) => (p || '').replace(/^\/+/, '');
+    const ensureLeadingSlash = (p: string) => (p.startsWith('/') ? p : '/' + p);
+
+    const epRaw = entryPath || '';
+    const ppRaw = parentPath || '/';
+
+    const ep = normalizeSlashes(epRaw);
+    const pp = normalizeSlashes(ppRaw) || '/';
+
+    // If the entry path is absolute after normalization, use it directly
+    if (ep.startsWith('/')) {
+      return ep;
     }
-    
-    // Construct the full path from parent and entry
-    if (parentPath === '/') {
-      return `/${entryPath}`;
-    } else {
-      return `${parentPath}/${entryPath}`.replace(/\/+/g, '/');
+
+    const epNoLead = stripLeadingSlash(ep);
+    const ppNoLead = stripLeadingSlash(pp);
+
+    // If entry path already starts with parent path, treat it as absolute
+    if (epNoLead === ppNoLead || epNoLead.startsWith(ppNoLead + '/')) {
+      return ensureLeadingSlash(epNoLead);
     }
+
+    // Construct full path
+    if (pp === '/') {
+      return ensureLeadingSlash(epNoLead);
+    }
+
+    return normalizeSlashes(`${pp}/${epNoLead}`);
   }
 }

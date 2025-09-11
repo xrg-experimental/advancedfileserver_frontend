@@ -11,6 +11,7 @@ import { FileOperationService } from '../../core/services/file-operation.service
 import { FileNode, FilePermissions } from '../../core/models/file.model';
 import { BreadcrumbItem } from '../../shared';
 import { FileActionBarComponent } from './file-action-bar';
+import { map } from 'rxjs/operators';
 import {
   RenameDialogComponent,
   RenameDialogData,
@@ -248,9 +249,44 @@ export class FilesComponent implements OnInit {
   }
 
   onDownloadFile(): void {
-    console.log('Download file action triggered for:', this.selectedItem?.name);
-    // TODO: Implement file download functionality in future task
-    this.showMessage('File download functionality will be implemented in a future task');
+    if (!this.selectedItem || this.selectedItem.type !== 'file') {
+      this.showMessage('Please select a file to download');
+      return;
+    }
+
+    console.log('Download file action triggered for:', this.selectedItem.name);
+
+    // Start the download and show a progress dialog (reusing the upload dialog)
+    const download$ = this.fileOperationService.downloadFile(this.selectedItem.path)
+      .pipe(map(p => [p])); // adapt to the dialog's array shape
+
+    const dialogRef = this.dialog.open(UploadProgressDialogComponent, {
+      width: '700px',
+      data: {
+        uploadProgress$: download$,
+        onCancel: (operationId: string) => this.fileOperationService.cancelOperation(operationId)
+      } as UploadProgressDialogData,
+      disableClose: true
+    });
+
+    download$.subscribe({
+      next: ([p]) => {
+        if (p.status === 'completed') {
+          this.showMessage(`File "${p.fileName}" downloaded successfully`);
+          dialogRef.disableClose = false;
+        } else if (p.status === 'error') {
+          this.showError(`Download failed: ${p.error}`);
+          dialogRef.disableClose = false;
+        } else if (p.status === 'cancelled') {
+          this.showMessage(`Download of "${p.fileName}" was cancelled`);
+          dialogRef.disableClose = false;
+        }
+      },
+      error: (e) => {
+        this.showError(`Download failed: ${e.message}`);
+        dialogRef.disableClose = false;
+      }
+    });
   }
 
   onRenameItem(): void {
@@ -295,7 +331,8 @@ export class FilesComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: DirectoryPickerDialogResult | undefined) => {
       if (result && this.selectedItem) {
-        const targetPath = result.selectedPath + '/' + this.selectedItem.name;
+        const base = (result.selectedPath === '/' ? '' : result.selectedPath).replace(/\\/g, '/').replace(/\/+$/g, '');
+        const targetPath = `${base}/${this.selectedItem.name}`.replace(/\/+/g, '/');
         this.performMove(this.selectedItem.path, targetPath);
       }
     });
