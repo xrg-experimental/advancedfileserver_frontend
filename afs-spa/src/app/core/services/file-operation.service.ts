@@ -556,7 +556,7 @@ export class FileOperationService {
     if (error?.status) {
       switch (error.status) {
         case 401:
-          return 'You are not signed in or your session is expired';
+          return 'You are not signed in or your session has expired';
         case 404:
           return 'File not found or has been moved';
         case 403:
