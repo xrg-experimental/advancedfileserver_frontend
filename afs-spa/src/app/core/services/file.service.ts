@@ -40,16 +40,34 @@ export class FileService {
   }
 
   private buildFullPath(entryPath: string, parentPath: string): string {
-    // If the entry path is absolute, use it directly
-    if (entryPath.startsWith('/')) {
-      return entryPath;
+    const normalizeSlashes = (p: string) => (p || '').replace(/\\/g, '/').replace(/\/+/g, '/');
+    const stripLeadingSlash = (p: string) => (p || '').replace(/^\/+/, '');
+    const ensureLeadingSlash = (p: string) => (p.startsWith('/') ? p : '/' + p);
+
+    const epRaw = entryPath || '';
+    const ppRaw = parentPath || '/';
+
+    const ep = normalizeSlashes(epRaw);
+    const pp = normalizeSlashes(ppRaw) || '/';
+
+    // If the entry path is absolute after normalization, use it directly
+    if (ep.startsWith('/')) {
+      return ep;
     }
 
-    // Construct the full path from parent and entry
-    if (parentPath === '/') {
-      return `/${entryPath}`;
-    } else {
-      return `${parentPath}/${entryPath}`.replace(/\/+/g, '/');
+    const epNoLead = stripLeadingSlash(ep);
+    const ppNoLead = stripLeadingSlash(pp);
+
+    // If entry path already starts with parent path, treat it as absolute
+    if (epNoLead === ppNoLead || epNoLead.startsWith(ppNoLead + '/')) {
+      return ensureLeadingSlash(epNoLead);
     }
+
+    // Construct full path
+    if (pp === '/') {
+      return ensureLeadingSlash(epNoLead);
+    }
+
+    return normalizeSlashes(`${pp}/${epNoLead}`);
   }
 }

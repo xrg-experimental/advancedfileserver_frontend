@@ -65,9 +65,11 @@ export class FileOperationService {
    * Move a file or directory to a new location
    */
   moveItem(sourcePath: string, targetPath: string): Observable<OperationResponse> {
-    const request: MoveRequest = { sourcePath, targetPath };
+    const normalizedSource = this.normalizePath(sourcePath);
+    const normalizedTarget = this.normalizePath(targetPath);
+    const request: MoveRequest = { sourcePath: normalizedSource, targetPath: normalizedTarget };
 
-    this.logger.debug('FileOperationService: Moving item', { sourcePath, targetPath });
+    this.logger.debug('FileOperationService: Moving item', { sourcePath: normalizedSource, targetPath: normalizedTarget });
 
     const url = this.http.getFullUrl('/files/move');
 
@@ -664,5 +666,21 @@ export class FileOperationService {
       : etaSec;
 
     return Math.round(smoothed);
+  }
+
+  // Normalize absolute and relative-like paths into a canonical absolute form used by API
+  private normalizePath(p: string): string {
+    if (!p) { return '/'; }
+    let out = p.replace(/\\/g, '/');
+    out = out.replace(/\/+/g, '/');
+    // Ensure single leading slash
+    if (!out.startsWith('/')) {
+      out = '/' + out;
+    }
+    // Remove trailing slash except for root
+    if (out.length > 1) {
+      out = out.replace(/\/+$/g, '');
+    }
+    return out;
   }
 }

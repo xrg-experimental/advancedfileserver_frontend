@@ -331,7 +331,8 @@ export class FilesComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: DirectoryPickerDialogResult | undefined) => {
       if (result && this.selectedItem) {
-        const targetPath = result.selectedPath + '/' + this.selectedItem.name;
+        const base = (result.selectedPath === '/' ? '' : result.selectedPath).replace(/\\/g, '/').replace(/\/+$/g, '');
+        const targetPath = `${base}/${this.selectedItem.name}`.replace(/\/+/g, '/');
         this.performMove(this.selectedItem.path, targetPath);
       }
     });
