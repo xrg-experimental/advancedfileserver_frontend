@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { FileNode, ApiFileListResponse, ApiFileEntry } from '../models/file.model';
+import { FileNode, ApiFileListResponse, ApiFileEntry, ListFilesRequest } from '../models/file.model';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +11,8 @@ export class FileService {
   constructor(private http: HttpService) {}
 
   getFiles(path: string = '/'): Observable<FileNode[]> {
-    return this.http.get<ApiFileListResponse>(`/files/list?path=${encodeURIComponent(path)}`)
+    const dto: ListFilesRequest = { path };
+    return this.http.post<ApiFileListResponse>(`/files/list`, dto)
       .pipe(
         map(response => this.transformApiResponse(response))
       );
@@ -24,7 +25,7 @@ export class FileService {
   private transformApiEntry(entry: ApiFileEntry, parentPath: string): FileNode {
     // Construct full path properly
     const fullPath = this.buildFullPath(entry.path, parentPath);
-    
+
     return {
       name: entry.name,
       type: entry.directory ? 'folder' : 'file',
@@ -43,7 +44,7 @@ export class FileService {
     if (entryPath.startsWith('/')) {
       return entryPath;
     }
-    
+
     // Construct the full path from parent and entry
     if (parentPath === '/') {
       return `/${entryPath}`;

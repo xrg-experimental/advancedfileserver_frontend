@@ -23,6 +23,11 @@ export interface ApiFileListResponse {
   totalDirectories: number;
 }
 
+// API request DTOs
+export interface ListFilesRequest {
+  path: string;
+}
+
 // Component interfaces
 export interface FileNode {
   name: string;
